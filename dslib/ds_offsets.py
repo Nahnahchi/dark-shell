@@ -24,7 +24,7 @@ class DSOffsets:
         NO_MOVE = 0x00000200
         NO_STAMINA_CONSUME = 0x00000400
         NO_MP_CONSUME = 0x00000800
-        N0O_DEAD = 0x00000020
+        NO_DEAD = 0x00000020
         NO_DAMAGE = 0x00000040
         NO_HIT = 0x00000080
         DRAW_HIT = 0x00000004
