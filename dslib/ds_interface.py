@@ -40,8 +40,14 @@ class DSInterface:
     def read_uint(self, address):
         return self._read_int(address, False)
 
+    def read_float(self, address):
+        return self._read_float(address)
+
     def read_str(self, address):
         return self._read_str(address)
+
+    def read_byte(self, address):
+        return self._read_byte(address)
 
     def _read_int(self, address, signed: bool):
         data = c_ulong() if not signed else c_long()
@@ -53,8 +59,28 @@ class DSInterface:
             windll.kernel32.SetLastError(10000)
             return None
 
+    def _read_float(self, address):
+        data = c_float()
+        bytes_read = c_ulong(0)
+        if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+            return data.value
+        else:
+            print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
+            windll.kernel32.SetLastError(10000)
+            return None
+
     def _read_str(self, address):
         data = create_unicode_buffer(32)
+        bytes_read = c_ulong(0)
+        if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+            return data.value
+        else:
+            print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
+            windll.kernel32.SetLastError(10000)
+            return None
+
+    def _read_byte(self, address):
+        data = c_byte()
         bytes_read = c_ulong(0)
         if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
@@ -95,7 +121,7 @@ class DSInterface:
             windll.kernel32.SetLastError(10000)
             return False
 
-    def write_memory(self, address, data: bytes):
+    def write_bytes(self, address, data: bytes):
         count = c_ulong(0)
         length = len(data)
         c_data = c_char_p(data[count.value:])
@@ -115,16 +141,12 @@ class DSInterface:
         length = sizeof(c_int(address))
         self.virtual_free_ex(self.process.handle, address, length, win32con.MEM_RELEASE)
 
-    def assemble(self, asm):
-        fasm_dll = fasm.get_fasm_dll()
-        write_bytes = fasm_dll.Assemble("use32\norg 0x0\n%s\n" % asm)
-
     def execute_asm(self, asm):
         fasm_dll = fasm.get_fasm_dll()
         write_bytes = fasm_dll.Assemble("use32\norg 0x0\n%s\n" % asm)
         start_addr = self.allocate(len(write_bytes))
         write_bytes = fasm_dll.Assemble("use32\norg %s\n%s\n" % (hex(start_addr), asm))
-        success = self.write_memory(start_addr, write_bytes)
+        success = self.write_bytes(start_addr, write_bytes)
         thread_id = c_ulong(0)
         self.wait_for_single_object(
             self.create_remote_thread(

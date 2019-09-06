@@ -1,4 +1,3 @@
-
 DS_ITEMS = {
     "catarina-helm": None,
     "catarina-armor": None,
@@ -853,6 +852,7 @@ DS_NEST = {
     "death-cam": None,
     "game-restart": None,
     "unlock-all-gestures": None,
+    "pos-gui": None,
     "warp": {
         "bonfire": None,
         "abyss": {
@@ -980,9 +980,33 @@ DS_NEST = {
             "sunlight-altar": None
         }
     },
+    "enable": {
+        "no-dead": None,
+        "no-goods-consume": None,
+        "super-armor": None,
+        "draw": None,
+        "gravity": None,
+        "no-stamina-consume": None,
+        "no-update": None,
+        "no-attack": None,
+        "no-move": None,
+        "no-hit": None,
+        "no-damage": None
+    },
+    "disable": {
+        "no-dead": None,
+        "no-goods-consume": None,
+        "super-armor": None,
+        "draw": None,
+        "gravity": None,
+        "no-stamina-consume": None,
+        "no-update": None,
+        "no-attack": None,
+        "no-move": None,
+        "no-hit": None,
+        "no-damage": None
+    },
     "set": {
-        "speed-game": None,
-        "speed-self": None,
         "vit": None,
         "atn": None,
         "end": None,
@@ -992,7 +1016,10 @@ DS_NEST = {
         "int": None,
         "fth": None,
         "sls": None,
-        "hum": None
+        "hum": None,
+        "speed-game": None,
+        "phantom-type": None,
+        "team-type": None,
     },
     "get": {
         "stats": None
@@ -1001,4 +1028,3 @@ DS_NEST = {
     "item-drop": DS_ITEMS,
     "item-get-upgrade": DS_ITEMS
 }
-

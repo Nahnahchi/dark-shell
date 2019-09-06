@@ -3,6 +3,7 @@ from collections import defaultdict
 from dslib.ds_interface import DSInterface
 from dslib.ds_offsets import DSPointersRelease, DSPointersDebug
 from ctypes import ArgumentError
+from math import pi
 
 
 class Scripts:
@@ -68,6 +69,7 @@ class Data(Enum):
 
 
 class Stat(Enum):
+
     VIT = "vit"
     ATN = "atn"
     END = "end"
@@ -231,9 +233,55 @@ class DSProcess:
                 success &= self.interface.write_flag(self.pointers[Data.GESTURES] + gesture, 1, True)
         return success
 
+    def set_phantom_type(self, value: int):
+        return self.interface.write_int(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.PHANTOM_TYPE, value)
+
+    def set_team_type(self, value: int):
+        return self.interface.write_int(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.TEAM_TYPE, value)
+
+    def set_super_armor(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
+                                         self.offsets.CharFlagsA.SET_SUPER_ARMOR, int(enable))
+
+    def set_draw_enable(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
+                                         self.offsets.CharFlagsA.SET_DRAW_ENABLE, int(enable))
+
+    def set_disable_gravity(self, disable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
+                                         self.offsets.CharFlagsA.SET_DISABLE_GRAVITY, int(disable))
+
     def set_no_dead(self, enable: bool):
         return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
                                          self.offsets.CharFlagsB.NO_DEAD, int(enable))
+
+    def set_no_move(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_MOVE, int(enable))
+
+    def set_no_stamina_consume(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_STAMINA_CONSUME, int(enable))
+
+    def set_no_goods_consume(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_GOODS_CONSUME, int(enable))
+
+    def set_no_update(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_UPDATE, int(enable))
+
+    def set_no_attack(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_ATTACK, int(enable))
+
+    def set_no_damage(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_DAMAGE, int(enable))
+
+    def set_no_hit(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
+                                         self.offsets.CharFlagsB.NO_HIT, int(enable))
 
     def get_class(self):
         return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.CLASS)
@@ -376,7 +424,6 @@ class DSProcess:
             self.interface.execute_asm(
                 Scripts.LEVEL_UP % (stats, stats, self.offsets.FUNC_LEVEL_UP_POINTER)
             )
-        self.set_hp(self.get_hp_max())
         self.set_no_dead(False)
 
         self.interface.free(stats)
@@ -385,11 +432,52 @@ class DSProcess:
 
         return success
 
+    def get_pos(self):
+        return (
+            self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_X),
+            self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_Y),
+            self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_Z),
+            (self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_ANGLE)
+             + pi) / (pi * 2) * 360
+        )
+
+    def get_pos_stable(self):
+        return (
+            self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_X),
+            self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_Y),
+            self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_Z),
+            (self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_ANGLE)
+             + pi) / (pi * 2) * 360
+        )
+
+    def jump_pos(self, x, y, z, a):
+        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_X, x)
+        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_Y, y)
+        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_Z, z)
+        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_ANGLE,
+                                   a / 360 * 2 * pi - pi)
+        self.interface.write_int(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP, 1)
+
+    def lock_pos(self, lock: bool):
+        if lock:
+            self.interface.write_bytes(self.offsets.POS_LOCK_1, bytes([0x90, 0x90, 0x90, 0x90, 0x90]))
+            self.interface.write_bytes(self.offsets.POS_LOCK_2, bytes([0x90, 0x90, 0x90, 0x90, 0x90]))
+        else:
+            self.interface.write_bytes(self.offsets.POS_LOCK_1, bytes([0x66, 0x0F, 0xD6, 0x46, 0x10]))
+            self.interface.write_bytes(self.offsets.POS_LOCK_2, bytes([0x66, 0x0F, 0xD6, 0x46, 0x18]))
+
+    def get_world(self):
+        return self.interface.read_byte(self.pointers[Data.UNKNOWN_A] + self.offsets.UnknownA.WORLD)
+
+    def get_area(self):
+        return self.interface.read_byte(self.pointers[Data.UNKNOWN_A] + self.offsets.UnknownA.AREA)
+
     def get_bonfire(self):
         return self.interface.read_int(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.LAST_BONFIRE)
 
     def set_bonfire(self, bonfire_id):
-        return self.interface.write_int(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.LAST_BONFIRE, bonfire_id)
+        return self.interface.write_int(self.pointers[Data.WORLD_STATE] +
+                                        self.offsets.WorldState.LAST_BONFIRE, bonfire_id)
 
     def item_drop(self, category, item_id, count):
         return \

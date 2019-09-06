@@ -61,14 +61,10 @@ class DSInfusion:
 
 
 def infuse(item: DSItem, infusion: DSInfusion, upgrade: int):
-    if upgrade > infusion.get_max_upgrade():
+    if upgrade > infusion.get_max_upgrade() or upgrade < 0:
         print("Can't upgrade %s weapons to +%d" % (infusion.get_name(), upgrade))
         return -1
-    item_id = item.get_id()
-    if item.get_upgrade_type() == Upgrade.PYRO_FLAME or item.get_upgrade_type() == Upgrade.PYRO_FLAME_ASCENDED:
-        item_id += upgrade * 100
-    else:
-        item_id += upgrade
+    item_id = item.get_id() + upgrade
     if item.get_upgrade_type() == Upgrade.INFUSABLE or item.get_upgrade_type() == Upgrade.INFUSABLE_RESTRICTED:
         item_id += infusion.get_value()
     return item_id
