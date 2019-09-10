@@ -62,7 +62,7 @@ class DSInterface:
     def _read_float(self, address):
         data = c_float()
         bytes_read = c_ulong(0)
-        if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+        if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
@@ -72,7 +72,7 @@ class DSInterface:
     def _read_str(self, address):
         data = create_unicode_buffer(32)
         bytes_read = c_ulong(0)
-        if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+        if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
@@ -82,7 +82,7 @@ class DSInterface:
     def _read_byte(self, address):
         data = c_byte()
         bytes_read = c_ulong(0)
-        if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+        if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
@@ -104,7 +104,7 @@ class DSInterface:
     def write_float(self, address, data: float):
         c_data = c_float(data)
         count = c_ulong(0)
-        if self.write_process_memory(self.process.handle, address, byref(c_data), sizeof(c_data), byref(count)):
+        if DSInterface.write_process_memory(self.process.handle, address, byref(c_data), sizeof(c_data), byref(count)):
             return True
         else:
             print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
@@ -114,7 +114,7 @@ class DSInterface:
     def write_int(self, address, data: int):
         c_data = c_int(data)
         count = c_ulong(0)
-        if self.write_process_memory(self.process.handle, address, byref(c_data), sizeof(c_data), byref(count)):
+        if DSInterface.write_process_memory(self.process.handle, address, byref(c_data), sizeof(c_data), byref(count)):
             return True
         else:
             print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
@@ -126,7 +126,7 @@ class DSInterface:
         length = len(data)
         c_data = c_char_p(data[count.value:])
         c_int(0)
-        if self.write_process_memory(self.process.handle, address, c_data, length, byref(count)):
+        if DSInterface.write_process_memory(self.process.handle, address, c_data, length, byref(count)):
             return True
         else:
             print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
@@ -134,12 +134,12 @@ class DSInterface:
             return False
 
     def allocate(self, length):
-        return self.virtual_alloc_ex(self.process.handle, 0, length, win32con.MEM_COMMIT,
-                                     win32con.PAGE_EXECUTE_READWRITE)
+        return DSInterface.virtual_alloc_ex(self.process.handle, 0, length, win32con.MEM_COMMIT,
+                                            win32con.PAGE_EXECUTE_READWRITE)
 
     def free(self, address):
         length = sizeof(c_int(address))
-        self.virtual_free_ex(self.process.handle, address, length, win32con.MEM_RELEASE)
+        DSInterface.virtual_free_ex(self.process.handle, address, length, win32con.MEM_RELEASE)
 
     def execute_asm(self, asm):
         fasm_dll = fasm.get_fasm_dll()
@@ -148,8 +148,8 @@ class DSInterface:
         write_bytes = fasm_dll.Assemble("use32\norg %s\n%s\n" % (hex(start_addr), asm))
         success = self.write_bytes(start_addr, write_bytes)
         thread_id = c_ulong(0)
-        self.wait_for_single_object(
-            self.create_remote_thread(
+        DSInterface.wait_for_single_object(
+            DSInterface.create_remote_thread(
                 self.process.handle, None, 0, start_addr, None, 0, byref(thread_id)
             ), 0xFFFFFFFF
         )

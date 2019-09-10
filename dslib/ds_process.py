@@ -133,11 +133,11 @@ class DSProcess:
         self.id = pid
         self.interface = DSInterface(pid)
         try:
-            self.version = self.DARKSOULS_VERSIONS[self.interface.read_uint(self.CHECK_VERSION)]
+            self.version = DSProcess.DARKSOULS_VERSIONS[self.interface.read_uint(DSProcess.CHECK_VERSION)]
         except KeyError:
             self.version = "Unknown"
         finally:
-            valid = True if self.version == "Steam" or self.version == "Debug" else False
+            valid = True if self.version in ["Steam", "Debug"] else False
             if not valid:
                 print("Your DARK SOULS version is not supported")
                 raise RuntimeError()
@@ -196,9 +196,9 @@ class DSProcess:
             area = id_str[1:4]
             section = int(id_str[4:5])
             number = int(id_str[5:8])
-            if group in self.EVENT_FLAG_GROUPS.keys() and area in self.EVENT_FLAG_AREAS.keys():
-                offset = self.EVENT_FLAG_GROUPS[group]
-                offset += self.EVENT_FLAG_AREAS[area] * 0x500
+            if group in DSProcess.EVENT_FLAG_GROUPS.keys() and area in DSProcess.EVENT_FLAG_AREAS.keys():
+                offset = DSProcess.EVENT_FLAG_GROUPS[group]
+                offset += DSProcess.EVENT_FLAG_AREAS[area] * 0x500
                 offset += section * 128
                 offset += int((number - (number % 32)) / 8)
                 mask = 0x80000000 >> (number % 32)
@@ -282,6 +282,123 @@ class DSProcess:
     def set_no_hit(self, enable: bool):
         return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
                                          self.offsets.CharFlagsB.NO_HIT, int(enable))
+
+    def get_player_dead_mode(self):
+        return self.interface.read_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
+                                        self.offsets.CharFlagsA.SET_DEAD_MODE)
+
+    def set_player_dead_mode(self, enable: bool):
+        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
+                                         self.offsets.CharFlagsA.SET_DEAD_MODE, enable)
+
+    def set_no_magic_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_MAGIC_QTY_CONSUME, int(enable))
+
+    def set_no_stamina_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_STAMINA_CONSUME, int(enable))
+
+    def set_exterminate(self, enable: bool):
+        self.interface.write_int(self.offsets.PLAYER_EXTERMINATE, int(enable))
+
+    def set_no_ammo_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_ARROW_CONSUME, int(enable))
+
+    def set_hide(self, enable: bool):
+        self.interface.write_int(self.offsets.PLAYER_HIDE, int(enable))
+
+    def set_silence(self, enable: bool):
+        self.interface.write_int(self.offsets.PLAYER_SILENCE, int(enable))
+
+    def set_no_dead_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_DEAD, int(enable))
+
+    def set_no_damage_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_DAMAGE, int(enable))
+
+    def set_no_hit_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_HIT, int(enable))
+
+    def set_no_attack_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_ATTACK, int(enable))
+
+    def set_no_move_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_MOVE, int(enable))
+
+    def set_no_update_ai_all(self, enable: bool):
+        self.interface.write_int(self.offsets.ALL_NO_UPDATE_AI, int(enable))
+
+    def draw_bounding(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.DRAW_BOUNDING_BOXES, int(enable))
+
+    def draw_sprite_masks(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.DRAW_DEPTH_TEX_EDGE, int(enable))
+
+    def draw_textures(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.DRAW_TEXTURES, int(enable))
+
+    def draw_sprites(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.NORMAL_DRAW_TEX_EDGE, int(enable))
+
+    def draw_trans(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.NORMAL_TRANS, int(enable))
+
+    def draw_shadows(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.DRAW_SHADOWS, int(enable))
+
+    def draw_sprite_shadows(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.DRAW_SPRITE_SHADOWS, int(enable))
+
+    def draw_map(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_MAP, int(enable))
+
+    def draw_creatures(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_CREATURES, int(enable))
+
+    def draw_objects(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_OBJECTS, int(enable))
+
+    def draw_sfx(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_SFX, int(enable))
+
+    def draw_compass_large(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.COMPASS_LARGE, int(enable))
+
+    def draw_compass_small(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.COMPASS_SMALL, int(enable))
+
+    def draw_altimeter(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.ALTIMETER, int(enable))
+
+    def draw_nodes(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.NODE_GRAPH, int(enable))
+
+    def override_filter(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.ENABLE_FILTER, int(enable))
+
+    def set_brightness(self, red: float, green: float, blue: float):
+        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_R, red)
+        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_G, green)
+        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_B, blue)
+
+    def set_contrast(self, red: float, green: float, blue: float):
+        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_R, red)
+        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_G, green)
+        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_B, blue)
+
+    def set_saturation(self, saturation: float):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+                                        self.offsets.GraphicsData.SATURATION, saturation)
+
+    def set_hue(self, hue: float):
+        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.HUE, hue)
 
     def get_class(self):
         return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.CLASS)
@@ -402,25 +519,24 @@ class DSProcess:
 
     def level_up(self, new_stats: dict):
 
-        success = True
         stats = self.interface.allocate(2048)
         humanity = self.get_humanity()
         set_stat = self.interface.write_int
         level = self.offsets.FuncLevelUp
 
-        success &= set_stat(stats + level.VIT, new_stats[Stat.VIT])
-        success &= set_stat(stats + level.ATN, new_stats[Stat.ATN])
-        success &= set_stat(stats + level.END, new_stats[Stat.END])
-        success &= set_stat(stats + level.STR, new_stats[Stat.STR])
-        success &= set_stat(stats + level.DEX, new_stats[Stat.DEX])
-        success &= set_stat(stats + level.RES, new_stats[Stat.RES])
-        success &= set_stat(stats + level.INT, new_stats[Stat.INT])
-        success &= set_stat(stats + level.FTH, new_stats[Stat.FTH])
-        success &= set_stat(stats + level.SLV, new_stats[Stat.SLV])
-        success &= set_stat(stats + level.SLS, new_stats[Stat.SLS])
+        set_stat(stats + level.VIT, new_stats[Stat.VIT])
+        set_stat(stats + level.ATN, new_stats[Stat.ATN])
+        set_stat(stats + level.END, new_stats[Stat.END])
+        set_stat(stats + level.STR, new_stats[Stat.STR])
+        set_stat(stats + level.DEX, new_stats[Stat.DEX])
+        set_stat(stats + level.RES, new_stats[Stat.RES])
+        set_stat(stats + level.INT, new_stats[Stat.INT])
+        set_stat(stats + level.FTH, new_stats[Stat.FTH])
+        set_stat(stats + level.SLV, new_stats[Stat.SLV])
+        set_stat(stats + level.SLS, new_stats[Stat.SLS])
 
         self.set_no_dead(True)
-        success &= \
+        success = \
             self.interface.execute_asm(
                 Scripts.LEVEL_UP % (stats, stats, self.offsets.FUNC_LEVEL_UP_POINTER)
             )
@@ -428,7 +544,7 @@ class DSProcess:
 
         self.interface.free(stats)
 
-        success &= self.set_humanity(humanity)
+        self.set_humanity(humanity)
 
         return success
 

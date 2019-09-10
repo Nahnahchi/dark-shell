@@ -128,7 +128,7 @@ class DSOffsets:
         GESTURES_UNLOCKED_POINTER = 0x424
 
     class GraphicsData:
-        DEPTH_DRAW_DEPTH_TEX_EDGE = 0x23F
+        DRAW_DEPTH_TEX_EDGE = 0x23F
         DRAW_TEXTURES = 0x240
         DRAW_BOUNDING_BOXES = 0x241
         NORMAL_DRAW_TEX_EDGE = 0x242
