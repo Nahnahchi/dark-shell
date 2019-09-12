@@ -1,4 +1,6 @@
 from dslib.ds_process import DSProcess, Stat
+from dslib.ds_gui import PositionGUI
+from dslib.ds_cmprocessor import DSCmp
 from dsobj.ds_bonfire import DSBonfire
 from dsobj.ds_item import DSItem, DSInfusion, Upgrade, infuse
 from dsres.ds_commands import DS_NEST
@@ -9,7 +11,6 @@ from collections import defaultdict
 from time import sleep
 from threading import Thread
 from psutil import pid_exists
-from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton
 import ctypes
 import winsound
 import os
@@ -17,122 +18,6 @@ import inspect
 import pywintypes
 import win32process
 import win32gui
-
-
-def main():
-    dark_shell = DarkShell()
-    while True:
-        dark_shell.prompt()
-
-
-class PositionGUI(Tk):
-
-    def __init__(self, process: DSProcess):
-
-        super(PositionGUI, self).__init__()
-
-        self.process = process
-        self.exit_flag = False
-
-        self.title("PosGUI")
-        self.protocol("WM_DELETE_WINDOW", self.on_quit)
-        self.resizable(False, False)
-
-        Label(self, text="current").grid(column=2, row=2)
-        Label(self, text="stable").grid(column=3, row=2)
-        Label(self, text="stored").grid(column=4, row=2)
-        Label(self, text="X").grid(column=1, row=3)
-        Label(self, text="Y").grid(column=1, row=4)
-        Label(self, text="Z").grid(column=1, row=5)
-        Label(self, text="α").grid(column=1, row=6)
-
-        self.x_current = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.x_current).grid(column=2, row=3)
-        self.x_stable = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.x_stable).grid(column=3, row=3)
-        self.x_stored = StringVar()
-        self.x_stored.set(process.get_pos_stable()[0])
-        Spinbox(self, from_=-1000, to=1000, format="%.3f", width=10, textvariable=self.x_stored).grid(column=4, row=3)
-
-        self.y_current = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.y_current).grid(column=2, row=4)
-        self.y_stable = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.y_stable).grid(column=3, row=4)
-        self.y_stored = StringVar()
-        self.y_stored.set(process.get_pos_stable()[1])
-        Spinbox(self, from_=-1000, to=1000, format="%.3f", width=10, textvariable=self.y_stored).grid(column=4, row=4)
-
-        self.z_current = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.z_current).grid(column=2, row=5)
-        self.z_stable = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.z_stable).grid(column=3, row=5)
-        self.z_stored = StringVar()
-        self.z_stored.set(process.get_pos_stable()[2])
-        Spinbox(self, from_=-1000, to=1000, format="%.3f", width=10, textvariable=self.z_stored).grid(column=4, row=5)
-
-        self.a_current = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.a_current).grid(column=2, row=6)
-        self.a_stable = StringVar()
-        Entry(self, width=10, state="readonly", textvariable=self.a_stable).grid(column=3, row=6)
-        self.a_stored = StringVar()
-        self.a_stored.set(process.get_pos_stable()[3])
-        Spinbox(self, from_=-360, to=360, format="%.3f", width=10, textvariable=self.a_stored).grid(column=4, row=6)
-
-        Button(self, width=7, text="store", command=self.store).grid(column=2, row=7)
-        Button(self, width=7, text="restore", command=self.restore).grid(column=4, row=7)
-
-        Label(self, text="world:").grid(column=1, row=8)
-        self.world = StringVar()
-        self.world.set(process.get_world())
-        Entry(self, width=10, state="readonly", textvariable=self.world).grid(column=2, row=8)
-        Label(self, text="area:").grid(column=1, row=9)
-        self.area = StringVar()
-        self.area.set(process.get_area())
-        Entry(self, width=10, state="readonly", textvariable=self.area).grid(column=2, row=9)
-
-        self.lock_pos = BooleanVar()
-        self.lock_pos.set(False)
-        Checkbutton(self, text="freeze", var=self.lock_pos, command=self.freeze).grid(column=4, row=9)
-
-        Thread(target=self.update).start()
-
-    def update(self):
-        while not self.exit_flag:
-            self.x_current.set("%.3f" % self.process.get_pos()[0])
-            self.x_stable.set("%.3f" % self.process.get_pos_stable()[0])
-            self.y_current.set("%.3f" % self.process.get_pos()[1])
-            self.y_stable.set("%.3f" % self.process.get_pos_stable()[1])
-            self.z_current.set("%.3f" % self.process.get_pos()[2])
-            self.z_stable.set("%.3f" % self.process.get_pos_stable()[2])
-            self.a_current.set("%.3f" % self.process.get_pos()[3])
-            self.a_stable.set("%.3f" % self.process.get_pos_stable()[3])
-            self.world.set(self.process.get_world())
-            self.area.set(self.process.get_area())
-            sleep(1)
-
-    def freeze(self):
-        self.process.lock_pos(self.lock_pos.get())
-
-    def store(self):
-        self.x_stored.set(self.x_current.get())
-        self.y_stored.set(self.y_current.get())
-        self.z_stored.set(self.z_current.get())
-        self.a_stored.set(self.a_current.get())
-
-    def restore(self):
-        try:
-            self.process.jump_pos(
-                float(self.x_stored.get()),
-                float(self.y_stored.get()),
-                float(self.z_stored.get()),
-                float(self.a_stored.get())
-            )
-        except ValueError as e:
-            print(e)
-
-    def on_quit(self):
-        self.exit_flag = True
-        self.destroy()
 
 
 class DarkSouls(DSProcess):
@@ -146,13 +31,13 @@ class DarkSouls(DSProcess):
 
     @staticmethod
     def get_item_name_and_count(args: list):
-        i_name = args[1]
+        i_name = args[0]
         i_count = 1
         try:
             if len(args) >= 3:
-                i_count = int(args[2])
+                i_count = int(args[1])
         except ValueError:
-            print("Wrong parameter type: %s" % args[2])
+            print("Wrong parameter type: %s" % args[1])
             return None, 0
         return i_name, i_count
 
@@ -196,6 +81,9 @@ class DarkSouls(DSProcess):
             print("Can't upgrade %s to +%s" % ("Unique" if is_unique else "Armor", upgrade))
             return None
         return upgrade
+        
+    def prepare(self):
+        self.load_pointers()
 
     def print_stats(self):
         print("\n\tHealth: %d/%d" % (self.get_hp(), self.get_hp_mod_max()))
@@ -302,7 +190,7 @@ class DarkSouls(DSProcess):
             self.infusions[infusion.get_name()] = infusion
 
 
-class DarkShell(DarkSouls):
+class DarkShell(DSCmp):
 
     PROCESS_NAME = "DARK SOULS"
 
@@ -310,7 +198,7 @@ class DarkShell(DarkSouls):
         super(DarkShell, self).__init__()
         self.game = DarkSouls()
         self.history = InMemoryHistory()
-        self.completer = NestedCompleter.from_nested_dict(DS_NEST)
+        self.set_completer(DS_NEST)
 
     def has_exited(self):
         return not pid_exists(self.id)
@@ -323,7 +211,273 @@ class DarkShell(DarkSouls):
                                                  "DARKSOULS.exe has exited", 0)
                 return
             sleep(10)
+            
+    def do_exit(self, args):
+        os._exit(0)
+        
+    def do_quit(self, args):
+        os._exit(0)
+        
+    def do_clear(self, args):
+        os.system("cls")
+    
+    def do_start(self, args):
+        try:
+            pid = DarkShell.get_window_pid(self.PROCESS_NAME)
+            self.game.attach(pid)
+            print("Successfully attached to the DARK SOULS process")
+            Thread(target=self.check_alive).start()
+            Thread(target=self.game.disable_fps_disconnect).start()
+        except (pywintypes.error, TypeError, RuntimeError) as e:
+            print("%s: couldn't attach to the DARK SOULS process" % type(e).__name__)
+        rbn = Thread(target=self.game.read_bonfires)
+        rit = Thread(target=self.game.read_items)
+        rin = Thread(target=self.game.read_infusions)
+        rbn.start(), rit.start(), rin.start()
+        for stat in vars(Stat).values():
+            if type(stat) == Stat:
+                self.game.stats[stat] = self.game.get_stat(stat)
+        rbn.join(), rit.join(), rin.join()
 
+    def do_pos_gui(self, args):
+        try:
+            PositionGUI(self.game).mainloop()
+        except Exception as e:
+            print("%s: couldn't launch position GUI\n%s" % (type(e).__name__, e))
+            
+    def do_set(self, args):
+                    
+                    try:
+
+                        if args[0] == "speed-game":
+
+                            if self.game.set_game_speed(float(args[1])):
+                                print("Game speed changed to %s" % args[1])
+
+                        elif args[0] == "speed-self":
+
+                            # TODO self speed change implementation
+                            pass
+
+                        elif args[0] == "phantom-type":
+
+                            if self.game.set_phantom_type(int(args[1])):
+                                print("Phantom type set to %s" % args[1])
+
+                        elif args[0] == "team-type":
+
+                            if self.game.set_team_type(int(args[1])):
+                                print("Team type set to %s" % args[1])
+
+                        elif args[0] == "hum":
+
+                            if self.game.set_humanity(int(args[1])):
+                                print("Humanity set to %s" % args[1])
+
+                        elif args[0] == "sls":
+
+                            if self.game.set_souls(int(args[1])):
+                                print("Souls set to %s" % args[1])
+
+                        else:
+
+                            if not self.game.level_stat(args[0], int(args[1])):
+                                print("Failed to level")
+
+                    except ValueError:
+
+                        print("Wrong parameter type: %s " % args[1])
+                        
+                    except Exception as e:
+
+                        print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_enable(self, args):
+    
+                try:
+                
+                    if args[0] == "super-armor":
+
+                        if self.game.set_super_armor(True):
+                            print("SUPER ARMOR enabled")
+
+                    elif args[0] == "draw":
+
+                        if self.game.set_draw_enable(True):
+                            print("DRAW enabled")
+
+                    elif args[0] == "gravity":
+
+                        if self.game.set_disable_gravity(False):
+                            print("GRAVITY enabled")
+
+                    elif args[0] == "no-dead":
+
+                        if self.game.set_no_dead(True):
+                            print("NO DEAD enabled")
+
+                    elif args[0] == "no-stamina-consume":
+
+                        if self.game.set_no_stamina_consume(True):
+                            print("NO STAMINA CONSUME enabled")
+
+                    elif args[0] == "no-goods-consume":
+
+                        if self.game.set_no_goods_consume(True):
+                            print("NO GOODS CONSUME enabled")
+
+                    elif args[0] == "no-update":
+
+                        if self.game.set_no_update(True):
+                            print("NO UPDATE enabled")
+
+                    elif args[0] == "no-attack":
+
+                        if self.game.set_no_attack(True):
+                            print("NO ATTACK enabled")
+
+                    elif args[0] == "no-move":
+
+                        if self.game.set_no_move(True):
+                            print("NO MOVE enabled")
+
+                    elif args[0] == "no-damage":
+
+                        if self.game.set_no_damage(True):
+                            print("NO DAMAGE enabled")
+
+                    elif args[0] == "no-hit":
+
+                        if self.game.set_no_hit(True):
+                            print("NO HIT enabled")
+
+                    elif args[0] == "death-cam":
+
+                        if self.game.death_cam(True):
+                            print("Death cam enabled")
+
+                except Exception as e:
+                
+                    print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_disable(self, args):
+    
+                try:
+                
+                    if args[0] == "super-armor":
+
+                        if self.game.set_super_armor(False):
+                            print("SUPER ARMOR disabled")
+
+                    elif args[0] == "draw":
+
+                        if self.game.set_draw_enable(False):
+                            print("DRAW disabled")
+
+                    elif args[0] == "gravity":
+
+                        if self.game.set_disable_gravity(True):
+                            print("GRAVITY disabled")
+
+                    elif args[0] == "no-dead":
+
+                        if self.game.set_no_dead(False):
+                            print("NO DEAD disabled")
+
+                    elif args[0] == "no-stamina-consume":
+
+                        if self.game.set_no_stamina_consume(False):
+                            print("NO STAMINA CONSUME disabled")
+
+                    elif args[0] == "no-goods-consume":
+
+                        if self.game.set_no_goods_consume(False):
+                            print("NO GOODS CONSUME disabled")
+
+                    elif args[0] == "no-update":
+
+                        if self.game.set_no_update(False):
+                            print("NO UPDATE disabled")
+
+                    elif args[0] == "no-attack":
+
+                        if self.game.set_no_attack(False):
+                            print("NO ATTACK disabled")
+
+                    elif args[0] == "no-move":
+
+                        if self.game.set_no_move(False):
+                            print("NO MOVE disabled")
+
+                    elif args[0] == "no-damage":
+
+                        if self.game.set_no_damage(False):
+                            print("NO DAMAGE disabled")
+
+                    elif args[0] == "no-hit":
+
+                        if self.game.set_no_hit(False):
+                            print("NO HIT disabled")
+
+                    elif args[0] == "death-cam":
+
+                        if self.game.death_cam(False):
+                            print("Death cam disabled")
+                
+                except Exception as e:
+                
+                    print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+                
+    def do_get(self, args):
+        try:
+            if args[0] == "stats":
+                self.game.print_stats()
+        except Exception as e:
+            print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_game_restart(self, args):
+        try:
+            if self.game.game_restart():
+                print("Game restarted")
+        except Exception as e:
+            print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_item_drop(self, args):
+        try:
+            i_name, i_count = DarkSouls.get_item_name_and_count(args)
+            if i_count > 0:
+                self.game.create_item(i_name, i_count, func=self.game.item_drop)
+        except Exception as e:
+            print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_item_get(self, args):
+        try:    
+            i_name, i_count = DarkSouls.get_item_name_and_count(args)
+            if i_count > 0:
+                self.game.create_item(i_name, i_count, func=self.game.item_get)
+        except Exception as e:
+            print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_item_get_upgrade(self, args):
+        try:
+            i_name, i_count = DarkSouls.get_item_name_and_count(args)
+            if i_count > 0:
+                self.game.upgrade_item(i_name, i_count)
+        except Exception as e:
+            print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    def do_warp(self, args):
+        try:
+            if args[0] == "bonfire":
+                if not self.bonfire_warp():
+                    print("Failed to warp")
+            else:
+                b_name = " ".join(args[0:])
+                self.bonfire_warp_by_name(b_name)
+        except Exception as e:
+            print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    '''
     def prompt(self):
         try:
             self.execute_command(prompt(
@@ -505,34 +659,17 @@ class DarkShell(DarkSouls):
         except (AttributeError, TypeError, KeyError, IndexError) as e:
 
             print("%s: couldn't complete the command\n%s" % (type(e), e))
-
+    '''
+    
     @staticmethod
     def get_window_pid(title):
         hwnd = win32gui.FindWindow(None, title)
         threadid, pid = win32process.GetWindowThreadProcessId(hwnd)
         return pid
 
-    def start(self):
-        try:
-            pid = DarkShell.get_window_pid(self.PROCESS_NAME)
-            self.attach(pid)
-            print("Successfully attached to the DARK SOULS process")
-            Thread(target=self.check_alive).start()
-            Thread(target=self.disable_fps_disconnect).start()
-        except (pywintypes.error, TypeError, RuntimeError) as e:
-            print("%s: couldn't attach to the DARK SOULS process" % type(e))
-        rbn = Thread(target=self.read_bonfires)
-        rit = Thread(target=self.read_items)
-        rin = Thread(target=self.read_infusions)
-        rbn.start(), rit.start(), rin.start()
-        for stat in vars(Stat).values():
-            if type(stat) == Stat:
-                self.stats[stat] = self.get_stat(stat)
-        rbn.join(), rit.join(), rin.join()
-
 
 if __name__ == "__main__":
     set_title("Dark Shell")
     print("Welcome to Dark Shell")
     print("Type 'start' to find the DARK SOULS process")
-    main()
+    DarkShell().cmploop()
