@@ -1,11 +1,14 @@
 from dslib.ds_process import DSProcess
 from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton
+from threading import Thread
+from time import sleep
 
-class PositionGUI(Tk):
+
+class DSPositionGUI(Tk):
 
     def __init__(self, process: DSProcess):
 
-        super(PositionGUI, self).__init__()
+        super(DSPositionGUI, self).__init__()
 
         self.process = process
         self.exit_flag = False

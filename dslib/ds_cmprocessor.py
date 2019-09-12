@@ -1,6 +1,6 @@
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.shortcuts import prompt, set_title
+from prompt_toolkit.shortcuts import prompt
 
 
 class DSParser:
@@ -29,9 +29,14 @@ class DSCmp:
     def set_completer(self, nest: dict):
         self.completer = NestedCompleter.from_nested_dict(nest)
     
-    def cmploop(self):
+    def cmp_loop(self):
         while True:
-            user_inp = prompt(DSCmp.prompt_prefix, completer=self.completer, history=self.history, enable_history_search=True)
+            user_inp = prompt(
+                DSCmp.prompt_prefix,
+                completer=self.completer,
+                history=self.history,
+                enable_history_search=True
+            )
             parser = DSParser(user_inp)
             command = parser.get_command()
             arguments = parser.get_arguments()
@@ -42,4 +47,4 @@ class DSCmp:
             ds_command = getattr(self, DSCmp.com_prefix + command.replace("-", "_"))
             ds_command(arguments)
         except AttributeError as e:
-                print("%s: %s" % (type(e).__name__, e))
+            print("%s: %s" % (type(e).__name__, e))

@@ -56,7 +56,6 @@ class DSInterface:
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return None
 
     def _read_float(self, address):
@@ -66,7 +65,6 @@ class DSInterface:
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return None
 
     def _read_str(self, address):
@@ -76,7 +74,6 @@ class DSInterface:
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return None
 
     def _read_byte(self, address):
@@ -86,7 +83,6 @@ class DSInterface:
             return data.value
         else:
             print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return None
 
     def read_flag(self, address, mask):
@@ -108,7 +104,6 @@ class DSInterface:
             return True
         else:
             print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return False
 
     def write_int(self, address, data: int):
@@ -118,7 +113,6 @@ class DSInterface:
             return True
         else:
             print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return False
 
     def write_bytes(self, address, data: bytes):
@@ -130,7 +124,6 @@ class DSInterface:
             return True
         else:
             print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
-            windll.kernel32.SetLastError(10000)
             return False
 
     def allocate(self, length):

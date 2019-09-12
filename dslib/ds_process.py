@@ -132,18 +132,21 @@ class DSProcess:
     def attach(self, pid):
         self.id = pid
         self.interface = DSInterface(pid)
+        self.check_version()
+        self.check_valid()
+
+    def check_version(self):
         try:
             self.version = DSProcess.DARKSOULS_VERSIONS[self.interface.read_uint(DSProcess.CHECK_VERSION)]
         except KeyError:
             self.version = "Unknown"
-        finally:
-            valid = True if self.version in ["Steam", "Debug"] else False
-            if not valid:
-                print("Your DARK SOULS version is not supported")
-                raise RuntimeError()
-            else:
-                self.offsets = DSPointersRelease if self.version == "Steam" else DSPointersDebug
-                self.load_pointers()
+
+    def check_valid(self):
+        valid = True if self.version in ["Steam", "Debug"] else False
+        if not valid:
+            raise RuntimeError("Your DARK SOULS version is not supported")
+        else:
+            self.offsets = DSPointersRelease if self.version == "Steam" else DSPointersDebug
 
     def load_pointers(self):
 
