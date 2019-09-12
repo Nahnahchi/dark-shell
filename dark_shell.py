@@ -229,7 +229,7 @@ class DarkShell(DSCmp):
             Thread(target=self.check_alive).start()
             Thread(target=self.game.disable_fps_disconnect).start()
         except (pywintypes.error, TypeError, RuntimeError) as e:
-            print("%s: couldn't attach to the DARK SOULS process" % type(e)__name__)
+            print("%s: couldn't attach to the DARK SOULS process" % type(e).__name__)
         rbn = Thread(target=self.game.read_bonfires)
         rit = Thread(target=self.game.read_items)
         rin = Thread(target=self.game.read_infusions)
