@@ -319,7 +319,7 @@ class DarkShell(DarkSouls):
         while True:
             if self.has_exited():
                 winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                ctypes.windll.user32.MessageBoxW(0, "DARK SOULS process is no longer running",
+                ctypes.windll.user32.MessageBoxW(0, "DARK SOULS process is no longer running.",
                                                  "DARKSOULS.exe has exited", 0)
                 return
             sleep(10)
