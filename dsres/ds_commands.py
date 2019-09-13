@@ -1,4 +1,5 @@
-DS_ITEMS = {
+
+DS_ITEM = {
     "catarina-helm": None,
     "catarina-armor": None,
     "catarina-gauntlets": None,
@@ -844,7 +845,34 @@ DS_ITEMS = {
     "help-me!-carving": None
 }
 
+DS_BOOL = {
+    "no-dead": None,
+    "no-dead-all": None,
+    "no-goods-consume": None,
+    "no-stamina-consume": None,
+    "no-update": None,
+    "no-attack": None,
+    "no-attack-all": None,
+    "no-move": None,
+    "no-move-all": None,
+    "no-hit": None,
+    "no-hit-all": None,
+    "no-damage": None,
+    "no-damage-all": None,
+    "no-update-ai": None,
+    "no-magic-all": None,
+    "no-ammo-consume-all": None,
+    "super-armor": None,
+    "draw": None,
+    "gravity": None,
+    "player-dead-mode": None,
+    "player-exterminate": None,
+    "player-hide": None,
+    "player-silence": None
+}
+
 DS_NEST = {
+    "help": None,
     "clear": None,
     "start": None,
     "exit": None,
@@ -980,32 +1008,6 @@ DS_NEST = {
             "sunlight-altar": None
         }
     },
-    "enable": {
-        "no-dead": None,
-        "no-goods-consume": None,
-        "super-armor": None,
-        "draw": None,
-        "gravity": None,
-        "no-stamina-consume": None,
-        "no-update": None,
-        "no-attack": None,
-        "no-move": None,
-        "no-hit": None,
-        "no-damage": None
-    },
-    "disable": {
-        "no-dead": None,
-        "no-goods-consume": None,
-        "super-armor": None,
-        "draw": None,
-        "gravity": None,
-        "no-stamina-consume": None,
-        "no-update": None,
-        "no-attack": None,
-        "no-move": None,
-        "no-hit": None,
-        "no-damage": None
-    },
     "set": {
         "vit": None,
         "atn": None,
@@ -1024,7 +1026,9 @@ DS_NEST = {
     "get": {
         "stats": None
     },
-    "item-get": DS_ITEMS,
-    "item-drop": DS_ITEMS,
-    "item-get-upgrade": DS_ITEMS
+    "enable": DS_BOOL,
+    "disable": DS_BOOL,
+    "item-get": DS_ITEM,
+    "item-drop": DS_ITEM,
+    "item-get-upgrade": DS_ITEM
 }

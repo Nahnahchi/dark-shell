@@ -8,17 +8,17 @@ from prompt_toolkit.shortcuts import set_title, radiolist_dialog, input_dialog
 from collections import defaultdict
 from time import sleep
 from threading import Thread
-from psutil import pid_exists
 import ctypes
 import winsound
 import os
 import inspect
-import pywintypes
 import win32process
 import win32gui
 
 
 class DarkSouls(DSProcess):
+
+    PROCESS_NAME = "DARK SOULS"
 
     def __init__(self):
         super(DarkSouls, self).__init__()
@@ -26,6 +26,15 @@ class DarkSouls(DSProcess):
         self.items = defaultdict(DSItem)
         self.infusions = defaultdict(DSInfusion)
         self.stats = defaultdict(int)
+
+    def check_alive(self):
+        while True:
+            if self.has_exited():
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                ctypes.windll.user32.MessageBoxW(0, "DARK SOULS process is no longer running!",
+                                                 "DARKSOULS.exe has exited", 0)
+                return
+            sleep(10)
 
     @staticmethod
     def get_item_name_and_count(args: list):
@@ -192,24 +201,16 @@ class DarkSouls(DSProcess):
 
 class DarkShell(DSCmp):
 
-    PROCESS_NAME = "DARK SOULS"
-
     def __init__(self):
         super(DarkShell, self).__init__()
         self.game = DarkSouls()
         self.set_completer(DS_NEST)
 
-    def has_exited(self):
-        return not pid_exists(self.game.id)
-
-    def check_alive(self):
-        while True:
-            if self.has_exited():
-                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                ctypes.windll.user32.MessageBoxW(0, "DARK SOULS process is no longer running.",
-                                                 "DARKSOULS.exe has exited", 0)
-                return
-            sleep(10)
+    @staticmethod
+    def get_window_pid(title):
+        hwnd = win32gui.FindWindow(None, title)
+        threadid, pid = win32process.GetWindowThreadProcessId(hwnd)
+        return pid
 
     @staticmethod
     def do_exit(args):
@@ -225,12 +226,12 @@ class DarkShell(DSCmp):
 
     def do_start(self, args):
         try:
-            pid = DarkShell.get_window_pid(self.PROCESS_NAME)
+            pid = DarkShell.get_window_pid(self.game.PROCESS_NAME)
             self.game.attach(pid)
             print("Successfully attached to the DARK SOULS process")
-            Thread(target=self.check_alive).start()
+            Thread(target=self.game.check_alive).start()
             Thread(target=self.game.disable_fps_disconnect).start()
-        except (pywintypes.error, TypeError, RuntimeError) as e:
+        except Exception as e:
             print("%s: couldn't attach to the DARK SOULS process\n%s" % (type(e).__name__, e))
         rbn = Thread(target=self.game.read_bonfires)
         rit = Thread(target=self.game.read_items)
@@ -247,6 +248,14 @@ class DarkShell(DSCmp):
             DSPositionGUI(self.game).mainloop()
         except Exception as e:
             print("%s: couldn't launch position GUI\n%s" % (type(e).__name__, e))
+
+    @staticmethod
+    def help_set():
+        print("\nUsage:\tset [option] [value]")
+        print("\nOptions:")
+        for opt in DS_NEST["set"].keys():
+            print("\t%s" % opt)
+        print("\n")
 
     def do_set(self, args):
 
@@ -297,75 +306,153 @@ class DarkShell(DSCmp):
 
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
 
+    @staticmethod
+    def help_enable():
+        print("\nUsage:\tenable [option]")
+        print("\nOptions:")
+        for opt in DS_NEST["enable"].keys():
+            print("\t%s" % opt)
+        print("\n")
+
     def do_enable(self, args):
 
         try:
 
             self.game.prepare()
 
+            enable = True
+
             if args[0] == "super-armor":
 
-                if self.game.set_super_armor(True):
+                if self.game.set_super_armor(enable):
                     print("SUPER ARMOR enabled")
 
             elif args[0] == "draw":
 
-                if self.game.set_draw_enable(True):
+                if self.game.set_draw_enable(enable):
                     print("DRAW enabled")
 
             elif args[0] == "gravity":
 
-                if self.game.set_disable_gravity(False):
+                if self.game.set_no_gravity(not enable):
                     print("GRAVITY enabled")
 
             elif args[0] == "no-dead":
 
-                if self.game.set_no_dead(True):
+                if self.game.set_no_dead(enable):
                     print("NO DEAD enabled")
 
             elif args[0] == "no-stamina-consume":
 
-                if self.game.set_no_stamina_consume(True):
+                if self.game.set_no_stamina_consume(enable):
                     print("NO STAMINA CONSUME enabled")
 
             elif args[0] == "no-goods-consume":
 
-                if self.game.set_no_goods_consume(True):
+                if self.game.set_no_goods_consume(enable):
                     print("NO GOODS CONSUME enabled")
 
             elif args[0] == "no-update":
 
-                if self.game.set_no_update(True):
+                if self.game.set_no_update(enable):
                     print("NO UPDATE enabled")
 
             elif args[0] == "no-attack":
 
-                if self.game.set_no_attack(True):
+                if self.game.set_no_attack(enable):
                     print("NO ATTACK enabled")
 
             elif args[0] == "no-move":
 
-                if self.game.set_no_move(True):
+                if self.game.set_no_move(enable):
                     print("NO MOVE enabled")
 
             elif args[0] == "no-damage":
 
-                if self.game.set_no_damage(True):
+                if self.game.set_no_damage(enable):
                     print("NO DAMAGE enabled")
 
             elif args[0] == "no-hit":
 
-                if self.game.set_no_hit(True):
+                if self.game.set_no_hit(enable):
                     print("NO HIT enabled")
 
             elif args[0] == "death-cam":
 
-                if self.game.death_cam(True):
+                if self.game.death_cam(enable):
                     print("Death cam enabled")
+
+            elif args[0] == "player-dead-mode":
+
+                if self.game.set_player_dead_mode(enable):
+                    print("DEAD MODE enabled")
+
+            elif args[0] == "no-magic-all":
+
+                if self.game.set_no_magic_all(enable):
+                    print("NO MAGIC ALL enabled")
+
+            elif args[0] == "player-exterminate":
+
+                if self.game.set_exterminate(enable):
+                    print("PLAYER EXTERMINATE enabled")
+
+            elif args[0] == "no-ammo-consume-all":
+
+                if self.game.set_no_ammo_consume_all(enable):
+                    print("NO AMMO CONSUME ALL enabled")
+
+            elif args[0] == "player-hide":
+
+                if self.game.set_hide(enable):
+                    print("PLAYER HIDE enabled")
+
+            elif args[0] == "player-silence":
+
+                if self.game.set_silence(enable):
+                    print("PLAYER SILENCE enabled")
+
+            elif args[0] == "no-dead-all":
+
+                if self.game.set_no_dead_all(enable):
+                    print("NO DEAD ALL enabled")
+
+            elif args[0] == "no-damage-all":
+
+                if self.game.set_no_damage_all(enable):
+                    print("NO DAMAGE ALL enabled")
+
+            elif args[0] == "no-hit-all":
+
+                if self.game.set_no_hit_all(enable):
+                    print("No HIT ALL enabled")
+
+            elif args[0] == "no-attack-all":
+
+                if self.game.set_no_attack_all(enable):
+                    print("NO ATTACK ALL enabled")
+
+            elif args[0] == "no-move-all":
+
+                if self.game.set_no_move_all(enable):
+                    print("NO MOVE ALL enabled")
+
+            elif args[0] == "no-update-ai":
+
+                if self.game.set_no_update_ai_all(enable):
+                    print("NO UPDATE AI ALL enabled")
 
         except Exception as e:
 
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    @staticmethod
+    def help_disable():
+        print("\nUsage:\tdisable [option]")
+        print("\nOptions:")
+        for opt in DS_NEST["disable"].keys():
+            print("\t%s" % opt)
+        print("\n")
 
     def do_disable(self, args):
 
@@ -373,69 +460,139 @@ class DarkShell(DSCmp):
 
             self.game.prepare()
 
+            enable = False
+
             if args[0] == "super-armor":
 
-                if self.game.set_super_armor(False):
+                if self.game.set_super_armor(enable):
                     print("SUPER ARMOR disabled")
 
             elif args[0] == "draw":
 
-                if self.game.set_draw_enable(False):
+                if self.game.set_draw_enable(enable):
                     print("DRAW disabled")
 
             elif args[0] == "gravity":
 
-                if self.game.set_disable_gravity(True):
+                if self.game.set_no_gravity(not enable):
                     print("GRAVITY disabled")
 
             elif args[0] == "no-dead":
 
-                if self.game.set_no_dead(False):
+                if self.game.set_no_dead(enable):
                     print("NO DEAD disabled")
 
             elif args[0] == "no-stamina-consume":
 
-                if self.game.set_no_stamina_consume(False):
+                if self.game.set_no_stamina_consume(enable):
                     print("NO STAMINA CONSUME disabled")
 
             elif args[0] == "no-goods-consume":
 
-                if self.game.set_no_goods_consume(False):
+                if self.game.set_no_goods_consume(enable):
                     print("NO GOODS CONSUME disabled")
 
             elif args[0] == "no-update":
 
-                if self.game.set_no_update(False):
+                if self.game.set_no_update(enable):
                     print("NO UPDATE disabled")
 
             elif args[0] == "no-attack":
 
-                if self.game.set_no_attack(False):
+                if self.game.set_no_attack(enable):
                     print("NO ATTACK disabled")
 
             elif args[0] == "no-move":
 
-                if self.game.set_no_move(False):
+                if self.game.set_no_move(enable):
                     print("NO MOVE disabled")
 
             elif args[0] == "no-damage":
 
-                if self.game.set_no_damage(False):
+                if self.game.set_no_damage(enable):
                     print("NO DAMAGE disabled")
 
             elif args[0] == "no-hit":
 
-                if self.game.set_no_hit(False):
+                if self.game.set_no_hit(enable):
                     print("NO HIT disabled")
 
             elif args[0] == "death-cam":
 
-                if self.game.death_cam(False):
+                if self.game.death_cam(enable):
                     print("Death cam disabled")
+
+            elif args[0] == "player-dead-mode":
+
+                if self.game.set_player_dead_mode(enable):
+                    print("DEAD MODE disabled")
+
+            elif args[0] == "no-magic-all":
+
+                if self.game.set_no_magic_all(enable):
+                    print("NO MAGIC ALL disabled")
+
+            elif args[0] == "player-exterminate":
+
+                if self.game.set_exterminate(enable):
+                    print("PLAYER EXTERMINATE disabled")
+
+            elif args[0] == "no-ammo-consume-all":
+
+                if self.game.set_no_ammo_consume_all(enable):
+                    print("NO AMMO CONSUME ALL disabled")
+
+            elif args[0] == "player-hide":
+
+                if self.game.set_hide(enable):
+                    print("PLAYER HIDE disabled")
+
+            elif args[0] == "player-silence":
+
+                if self.game.set_silence(enable):
+                    print("PLAYER SILENCE disabled")
+
+            elif args[0] == "no-dead-all":
+
+                if self.game.set_no_dead_all(enable):
+                    print("NO DEAD ALL disabled")
+
+            elif args[0] == "no-damage-all":
+
+                if self.game.set_no_damage_all(enable):
+                    print("NO DAMAGE ALL disabled")
+
+            elif args[0] == "no-hit-all":
+
+                if self.game.set_no_hit_all(enable):
+                    print("No HIT ALL disabled")
+
+            elif args[0] == "no-attack-all":
+
+                if self.game.set_no_attack_all(enable):
+                    print("NO ATTACK ALL disabled")
+
+            elif args[0] == "no-move-all":
+
+                if self.game.set_no_move_all(enable):
+                    print("NO MOVE ALL disabled")
+
+            elif args[0] == "no-update-ai":
+
+                if self.game.set_no_update_ai_all(enable):
+                    print("NO UPDATE AI ALL disabled")
 
         except Exception as e:
 
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    @staticmethod
+    def help_get():
+        print("\nUsage:\tget [option]")
+        print("\nOptions:")
+        for opt in DS_NEST["get"].keys():
+            print("\t%s" % opt)
+        print("\n")
 
     def do_get(self, args):
         try:
@@ -453,6 +610,10 @@ class DarkShell(DSCmp):
         except Exception as e:
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
 
+    @staticmethod
+    def help_item_drop():
+        print("\nUsage:\titem-drop [option]\n")
+
     def do_item_drop(self, args):
         try:
             self.game.prepare()
@@ -461,6 +622,10 @@ class DarkShell(DSCmp):
                 self.game.create_item(i_name, i_count, func=self.game.item_drop)
         except Exception as e:
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    @staticmethod
+    def help_item_get():
+        print("\nUsage:\titem-get [option]\n")
 
     def do_item_get(self, args):
         try:
@@ -471,6 +636,10 @@ class DarkShell(DSCmp):
         except Exception as e:
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
 
+    @staticmethod
+    def help_item_get_upgrade():
+        print("\nUsage:\titem-get-upgrade [option]\n")
+
     def do_item_get_upgrade(self, args):
         try:
             self.game.prepare()
@@ -479,6 +648,19 @@ class DarkShell(DSCmp):
                 self.game.upgrade_item(i_name, i_count)
         except Exception as e:
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
+
+    @staticmethod
+    def help_warp():
+        print("\nUsage:\twarp [option [option]]")
+        print("\nOptions:")
+        for opt in DS_NEST["warp"].keys():
+            if DS_NEST["warp"][opt] is not None:
+                places = " [ "
+                for place in DS_NEST["warp"][opt].keys():
+                    places += place + " "
+                opt += places + "]"
+            print("\t%s" % opt)
+        print("\n")
 
     def do_warp(self, args):
         try:
@@ -491,12 +673,6 @@ class DarkShell(DSCmp):
                 self.game.bonfire_warp_by_name(b_name)
         except Exception as e:
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
-
-    @staticmethod
-    def get_window_pid(title):
-        hwnd = win32gui.FindWindow(None, title)
-        threadid, pid = win32process.GetWindowThreadProcessId(hwnd)
-        return pid
 
 
 if __name__ == "__main__":

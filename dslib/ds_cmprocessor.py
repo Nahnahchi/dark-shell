@@ -48,3 +48,18 @@ class DSCmp:
             ds_command(arguments)
         except AttributeError as e:
             print("%s: %s" % (type(e).__name__, e))
+
+    def do_help(self, args):
+        if len(args) > 0:
+            try:
+                getattr(self, "help_" + args[0])()
+            except AttributeError as e:
+                print("%s: %s" % (type(e).__name__, e))
+        else:
+            commands = []
+            for name in dir(self.__class__):
+                if name[:len(DSCmp.com_prefix)] == DSCmp.com_prefix:
+                    commands.append(name[len(DSCmp.com_prefix):].replace("_", "-"))
+            commands.sort()
+            for command in commands:
+                print("\t%s" % command)

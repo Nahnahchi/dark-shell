@@ -4,6 +4,7 @@ from dslib.ds_interface import DSInterface
 from dslib.ds_offsets import DSPointersRelease, DSPointersDebug
 from ctypes import ArgumentError
 from math import pi
+from psutil import pid_exists
 
 
 class Scripts:
@@ -129,11 +130,15 @@ class DSProcess:
         self.version = None
         self.offsets = None
 
+    def has_exited(self):
+        return not pid_exists(self.id)
+
     def attach(self, pid):
         self.id = pid
         self.interface = DSInterface(pid)
         self.check_version()
         self.check_valid()
+        self.load_pointers()
 
     def check_version(self):
         try:
@@ -142,7 +147,7 @@ class DSProcess:
             self.version = "Unknown"
 
     def check_valid(self):
-        valid = True if self.version in ["Steam", "Debug"] else False
+        valid = True if self.version in ("Steam", "Debug") else False
         if not valid:
             raise RuntimeError("Your DARK SOULS version is not supported")
         else:
@@ -250,9 +255,9 @@ class DSProcess:
         return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
                                          self.offsets.CharFlagsA.SET_DRAW_ENABLE, int(enable))
 
-    def set_disable_gravity(self, disable: bool):
+    def set_no_gravity(self, enable: bool):
         return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
-                                         self.offsets.CharFlagsA.SET_DISABLE_GRAVITY, int(disable))
+                                         self.offsets.CharFlagsA.SET_DISABLE_GRAVITY, int(enable))
 
     def set_no_dead(self, enable: bool):
         return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
@@ -295,40 +300,100 @@ class DSProcess:
                                          self.offsets.CharFlagsA.SET_DEAD_MODE, enable)
 
     def set_no_magic_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_MAGIC_QTY_CONSUME, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_MAGIC_QTY_CONSUME, int(enable))
 
     def set_no_stamina_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_STAMINA_CONSUME, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_STAMINA_CONSUME, int(enable))
 
     def set_exterminate(self, enable: bool):
-        self.interface.write_int(self.offsets.PLAYER_EXTERMINATE, int(enable))
+        return self.interface.write_int(self.offsets.PLAYER_EXTERMINATE, int(enable))
 
-    def set_no_ammo_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_ARROW_CONSUME, int(enable))
+    def set_no_ammo_consume_all(self, enable: bool):
+        return self.interface.write_int(self.offsets.ALL_NO_ARROW_CONSUME, int(enable))
 
     def set_hide(self, enable: bool):
-        self.interface.write_int(self.offsets.PLAYER_HIDE, int(enable))
+        return self.interface.write_int(self.offsets.PLAYER_HIDE, int(enable))
 
     def set_silence(self, enable: bool):
-        self.interface.write_int(self.offsets.PLAYER_SILENCE, int(enable))
+        return self.interface.write_int(self.offsets.PLAYER_SILENCE, int(enable))
 
     def set_no_dead_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_DEAD, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_DEAD, int(enable))
 
     def set_no_damage_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_DAMAGE, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_DAMAGE, int(enable))
 
     def set_no_hit_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_HIT, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_HIT, int(enable))
 
     def set_no_attack_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_ATTACK, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_ATTACK, int(enable))
 
     def set_no_move_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_MOVE, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_MOVE, int(enable))
 
     def set_no_update_ai_all(self, enable: bool):
-        self.interface.write_int(self.offsets.ALL_NO_UPDATE_AI, int(enable))
+        return self.interface.write_int(self.offsets.ALL_NO_UPDATE_AI, int(enable))
+
+    def disable_all_area_enemies(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, int(disable))
+
+    def disable_all_area_event(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, int(disable))
+
+    def disable_all_area_map(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_MAP, int(disable))
+
+    def disable_all_area_obj(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, int(disable))
+
+    def enable_all_area_obj(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, int(enable))
+
+    def enable_all_area_obj_break(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, int(enable))
+
+    def disable_all_area_hi_hit(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, int(disable))
+
+    def disable_all_area_lo_hit(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, int(disable))
+
+    def disable_all_area_sfx(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_SFX, int(disable))
+
+    def disable_all_area_sound(self, disable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, int(disable))
+
+    def enable_obj_break_record_mode(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, int(enable))
+
+    def enable_auto_map_warp_mode(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_AUTO_MAP_WARP_MODE, int(enable))
+
+    def enable_chr_npc_wander_test(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_CHR_NPC_WANDER_TEST, int(enable))
+
+    def enable_dbg_chr_all_dead(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_DBG_CHR_ALL_DEAD, int(enable))
+
+    def enable_online_mode(self, enable: bool):
+        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+                                        self.offsets.GameMan.IS_ONLINE_MODE, int(enable))
 
     def draw_bounding(self, enable: bool):
         return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +

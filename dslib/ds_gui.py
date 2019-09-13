@@ -4,6 +4,18 @@ from threading import Thread
 from time import sleep
 
 
+class DSGraphicsGUI(Tk):
+
+    def __init__(self, process: DSProcess):
+
+        super(DSGraphicsGUI, self).__init__()
+
+        self.process = process
+
+        self.title("GraphicsGUI")
+        self.resizable(False, False)
+
+
 class DSPositionGUI(Tk):
 
     def __init__(self, process: DSProcess):
