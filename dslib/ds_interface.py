@@ -1,4 +1,5 @@
-from ctypes import *
+from ctypes import WinDLL, byref, sizeof, create_unicode_buffer
+from ctypes import POINTER, c_size_t, c_char_p, c_ulong, c_long, c_float, c_int, c_byte
 from ctypes.wintypes import HANDLE, LPCVOID, LPVOID, LPDWORD, DWORD, BOOL
 from fasm import fasm
 import win32con
@@ -31,6 +32,8 @@ class DSInterface:
     wait_for_single_object = kernel32.WaitForSingleObject
     wait_for_single_object.argtypes = (HANDLE, DWORD)
 
+    get_last_error = kernel32.GetLastError
+
     def __init__(self, pid):
         self.process = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, False, pid)
 
@@ -55,7 +58,7 @@ class DSInterface:
         if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
-            print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to read memory - error code: ", DSInterface.get_last_error())
             return None
 
     def _read_float(self, address):
@@ -64,7 +67,7 @@ class DSInterface:
         if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
-            print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to read memory - error code: ", DSInterface.get_last_error())
             return None
 
     def _read_str(self, address):
@@ -73,7 +76,7 @@ class DSInterface:
         if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
-            print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to read memory - error code: ", DSInterface.get_last_error())
             return None
 
     def _read_byte(self, address):
@@ -82,7 +85,7 @@ class DSInterface:
         if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
-            print("Failed to read memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to read memory - error code: ", DSInterface.get_last_error())
             return None
 
     def read_flag(self, address, mask):
@@ -103,7 +106,7 @@ class DSInterface:
         if DSInterface.write_process_memory(self.process.handle, address, byref(c_data), sizeof(c_data), byref(count)):
             return True
         else:
-            print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to write memory - error code: ", DSInterface.get_last_error())
             return False
 
     def write_int(self, address, data: int):
@@ -112,7 +115,7 @@ class DSInterface:
         if DSInterface.write_process_memory(self.process.handle, address, byref(c_data), sizeof(c_data), byref(count)):
             return True
         else:
-            print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to write memory - error code: ", DSInterface.get_last_error())
             return False
 
     def write_bytes(self, address, data: bytes):
@@ -123,7 +126,7 @@ class DSInterface:
         if DSInterface.write_process_memory(self.process.handle, address, c_data, length, byref(count)):
             return True
         else:
-            print("Failed to write memory - error code: ", windll.kernel32.GetLastError())
+            print("Failed to write memory - error code: ", DSInterface.get_last_error())
             return False
 
     def allocate(self, length):
