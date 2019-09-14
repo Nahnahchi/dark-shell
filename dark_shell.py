@@ -8,12 +8,13 @@ from prompt_toolkit.shortcuts import set_title, radiolist_dialog, input_dialog
 from collections import defaultdict
 from time import sleep
 from threading import Thread
+from os import system, listdir, _exit
+from os.path import join, isfile, dirname
+from inspect import getfile, currentframe
 import ctypes
-import winsound
-import os
-import inspect
-import win32process
 import win32gui
+import win32process
+import winsound
 
 
 class DarkSouls(DSProcess):
@@ -183,8 +184,8 @@ class DarkSouls(DSProcess):
             self.bonfires[bonfire.get_name()] = bonfire
 
     def read_items(self):
-        item_dir = os.path.join(os.path.dirname(inspect.getfile(inspect.currentframe())), "dsres", "items")
-        item_files = [f for f in os.listdir(item_dir) if os.path.isfile(os.path.join(item_dir, f))]
+        item_dir = join(dirname(getfile(currentframe())), "dsres", "items")
+        item_files = [f for f in listdir(item_dir) if isfile(join(item_dir, f))]
         for file in item_files:
             items = open("dsres/items/%s" % file, "r").readlines()
             category = items[0]
@@ -209,20 +210,20 @@ class DarkShell(DSCmp):
     @staticmethod
     def get_window_pid(title):
         hwnd = win32gui.FindWindow(None, title)
-        threadid, pid = win32process.GetWindowThreadProcessId(hwnd)
+        thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
         return pid
 
     @staticmethod
     def do_exit(args):
-        os._exit(0)
+        _exit(0)
 
     @staticmethod
     def do_quit(args):
-        os._exit(0)
+        _exit(0)
 
     @staticmethod
     def do_clear(args):
-        os.system("cls")
+        system("cls")
 
     def do_start(self, args):
         try:
@@ -442,6 +443,76 @@ class DarkShell(DSCmp):
                 if self.game.set_no_update_ai_all(enable):
                     print("NO UPDATE AI ALL enabled")
 
+            elif args[0] == "event":
+
+                if self.game.disable_all_area_event(not enable):
+                    print("ALL AREA EVENT enabled")
+
+            elif args[0] == "enemies":
+
+                if self.game.disable_all_area_enemies(not enable):
+                    print("ALL AREA ENEMIES enabled")
+
+            elif args[0] == "map":
+
+                if self.game.disable_all_area_map(not enable):
+                    print("ALL AREA MAP enabled")
+
+            elif args[0] == "obj":
+
+                if self.game.disable_all_area_obj(not enable):
+                    print("ALL AREA OBJ enabled")
+
+            elif args[0] == "obj-break":
+
+                if self.game.enable_all_area_obj_break(enable):
+                    print("ALL AREA OBJ BREAK enabled")
+
+            elif args[0] == "hi-hit":
+
+                if self.game.disable_all_area_hi_hit(not enable):
+                    print("ALL AREA HI HIT enabled")
+
+            elif args[0] == "lo-hit":
+
+                if self.game.disable_all_area_lo_hit(not enable):
+                    print("ALL AREA LO HIT enabled")
+
+            elif args[0] == "sfx":
+
+                if self.game.disable_all_area_sfx(not enable):
+                    print("ALL AREA SFX enabled")
+
+            elif args[0] == "sound":
+
+                if self.game.disable_all_area_sound(not enable):
+                    print("ALL AREA SOUND enabled")
+
+            elif args[0] == "obj-break-record-mode":
+
+                if self.game.enable_obj_break_record_mode(enable):
+                    print("OBJ BREAK RECORD MODE enabled")
+
+            elif args[0] == "auto-map-warp-mode":
+
+                if self.game.enable_auto_map_warp_mode(enable):
+                    print("AUTO MAP WARP MODE enabled")
+
+            elif args[0] == "chr-npc-wander-test":
+
+                if self.game.enable_chr_npc_wander_test(enable):
+                    print("CHR NPC WANDER TEST enabled")
+
+            elif args[0] == "dbg-chr-all-dead":
+
+                if self.game.enable_dbg_chr_all_dead(enable):
+                    print("DBG CHR ALL DEAD enabled")
+
+            elif args[0] == "online-mode":
+
+                if self.game.enable_online_mode(enable):
+                    print("ONLINE MODE enabled")
+
         except Exception as e:
 
             print("%s: couldn't complete the command\n%s" % (type(e).__name__, e))
@@ -581,6 +652,76 @@ class DarkShell(DSCmp):
 
                 if self.game.set_no_update_ai_all(enable):
                     print("NO UPDATE AI ALL disabled")
+
+            elif args[0] == "event":
+
+                if self.game.disable_all_area_event(not enable):
+                    print("ALL AREA EVENT disabled")
+
+            elif args[0] == "enemies":
+
+                if self.game.disable_all_area_enemies(not enable):
+                    print("ALL AREA ENEMIES disabled")
+
+            elif args[0] == "map":
+
+                if self.game.disable_all_area_map(not enable):
+                    print("ALL AREA MAP disabled")
+
+            elif args[0] == "obj":
+
+                if self.game.disable_all_area_obj(not enable):
+                    print("ALL AREA OBJ disabled")
+
+            elif args[0] == "obj-break":
+
+                if self.game.enable_all_area_obj_break(enable):
+                    print("ALL AREA OBJ BREAK disabled")
+
+            elif args[0] == "hi-hit":
+
+                if self.game.disable_all_area_hi_hit(not enable):
+                    print("ALL AREA HI HIT disabled")
+
+            elif args[0] == "lo-hit":
+
+                if self.game.disable_all_area_lo_hit(not enable):
+                    print("ALL AREA LO HIT disabled")
+
+            elif args[0] == "sfx":
+
+                if self.game.disable_all_area_sfx(not enable):
+                    print("ALL AREA SFX disabled")
+
+            elif args[0] == "sound":
+
+                if self.game.disable_all_area_sound(not enable):
+                    print("ALL AREA SOUND disabled")
+
+            elif args[0] == "obj-break-record-mode":
+
+                if self.game.enable_obj_break_record_mode(enable):
+                    print("OBJ BREAK RECORD MODE disabled")
+
+            elif args[0] == "auto-map-warp-mode":
+
+                if self.game.enable_auto_map_warp_mode(enable):
+                    print("AUTO MAP WARP MODE disabled")
+
+            elif args[0] == "chr-npc-wander-test":
+
+                if self.game.enable_chr_npc_wander_test(enable):
+                    print("CHR NPC WANDER TEST disabled")
+
+            elif args[0] == "dbg-chr-all-dead":
+
+                if self.game.enable_dbg_chr_all_dead(enable):
+                    print("DBG CHR ALL DEAD disabled")
+
+            elif args[0] == "online-mode":
+
+                if self.game.enable_online_mode(enable):
+                    print("ONLINE MODE disabled")
 
         except Exception as e:
 

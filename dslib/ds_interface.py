@@ -2,8 +2,8 @@ from ctypes import WinDLL, byref, sizeof, create_unicode_buffer
 from ctypes import POINTER, c_size_t, c_char_p, c_ulong, c_long, c_float, c_int, c_byte
 from ctypes.wintypes import HANDLE, LPCVOID, LPVOID, LPDWORD, DWORD, BOOL
 from fasm import fasm
-import win32con
 import win32api
+import win32con
 
 
 class DSInterface:

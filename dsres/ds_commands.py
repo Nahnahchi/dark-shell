@@ -1,4 +1,3 @@
-
 DS_ITEM = {
     "catarina-helm": None,
     "catarina-armor": None,
@@ -868,7 +867,21 @@ DS_BOOL = {
     "player-dead-mode": None,
     "player-exterminate": None,
     "player-hide": None,
-    "player-silence": None
+    "player-silence": None,
+    "event": None,
+    "enemies": None,
+    "map": None,
+    "obj": None,
+    "obj-break": None,
+    "hi-hit": None,
+    "lo-hit": None,
+    "sfx": None,
+    "sound": None,
+    "obj-break-record-mode": None,
+    "auto-map-warp-mode": None,
+    "chr-npc-wander-test": None,
+    "dbg-chr-all-dead": None,
+    "online-mode": None
 }
 
 DS_NEST = {

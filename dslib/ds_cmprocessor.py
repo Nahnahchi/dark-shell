@@ -20,6 +20,7 @@ class DSParser:
 class DSCmp:
     
     com_prefix = "do_"
+    help_prefix = "help_"
     prompt_prefix = "~ "
     
     def __init__(self):
@@ -44,15 +45,14 @@ class DSCmp:
     
     def execute_command(self, command, arguments):
         try:
-            ds_command = getattr(self, DSCmp.com_prefix + command.replace("-", "_"))
-            ds_command(arguments)
+            getattr(self, DSCmp.com_prefix + command.replace("-", "_"))(arguments)
         except AttributeError as e:
             print("%s: %s" % (type(e).__name__, e))
 
     def do_help(self, args):
         if len(args) > 0:
             try:
-                getattr(self, "help_" + args[0])()
+                getattr(self, DSCmp.help_prefix + args[0])()
             except AttributeError as e:
                 print("%s: %s" % (type(e).__name__, e))
         else:

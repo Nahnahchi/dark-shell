@@ -142,7 +142,11 @@ class DSProcess:
 
     def check_version(self):
         try:
-            self.version = DSProcess.DARKSOULS_VERSIONS[self.interface.read_uint(DSProcess.CHECK_VERSION)]
+            version = self.interface.read_uint(DSProcess.CHECK_VERSION)
+            if version is not None:
+                self.version = DSProcess.DARKSOULS_VERSIONS[version]
+            else:
+                raise RuntimeError("Couldn't read game's version")
         except KeyError:
             self.version = "Unknown"
 
