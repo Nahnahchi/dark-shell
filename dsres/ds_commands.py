@@ -887,12 +887,14 @@ DS_BOOL = {
 DS_NEST = {
     "help": None,
     "clear": None,
-    "start": None,
+    "begin": None,
     "exit": None,
     "quit": None,
+    "end": None,
     "death-cam": None,
     "game-restart": None,
     "unlock-all-gestures": None,
+    "menu-kick": None,
     "pos-gui": None,
     "warp": {
         "bonfire": None,
@@ -1037,7 +1039,7 @@ DS_NEST = {
         "team-type": None,
     },
     "get": {
-        "stats": None
+        "stats": None,
     },
     "enable": DS_BOOL,
     "disable": DS_BOOL,

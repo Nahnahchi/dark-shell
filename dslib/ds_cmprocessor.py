@@ -26,7 +26,11 @@ class DSCmp:
     def __init__(self):
         self.completer = None
         self.history = InMemoryHistory()
-    
+
+    @staticmethod
+    def get_method_name(prefix: str, name: str):
+        return prefix + name.replace("-", "_")
+
     def set_completer(self, nest: dict):
         self.completer = NestedCompleter.from_nested_dict(nest)
     
@@ -42,12 +46,24 @@ class DSCmp:
             command = parser.get_command()
             arguments = parser.get_arguments()
             self.execute_command(command, arguments)
-    
+
     def execute_command(self, command, arguments):
         try:
-            getattr(self, DSCmp.com_prefix + command.replace("-", "_"))(arguments)
+            getattr(self, DSCmp.get_method_name(DSCmp.com_prefix, command))(arguments)
         except AttributeError as e:
             print("%s: %s" % (type(e).__name__, e))
+
+    def execute_source(self, source):
+        if source is not None:
+            try:
+                commands = open(source, "r").readlines()
+                for command in commands:
+                    parser = DSParser(command)
+                    c = parser.get_command()
+                    a = parser.get_arguments()
+                    self.execute_command(c, a)
+            except (PermissionError, FileNotFoundError) as e:
+                print("%s: %s" % (type(e).__name__, e))
 
     def do_help(self, args):
         if len(args) > 0:

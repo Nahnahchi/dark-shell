@@ -245,6 +245,9 @@ class DSProcess:
                 success &= self.interface.write_flag(self.pointers[Data.GESTURES] + gesture, 1, True)
         return success
 
+    def menu_kick(self):
+        return self.interface.write_int(self.pointers[Data.UNKNOWN_C] + self.offsets.UnknownC.MENU_KICK, 2)
+
     def set_phantom_type(self, value: int):
         return self.interface.write_int(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.PHANTOM_TYPE, value)
 
