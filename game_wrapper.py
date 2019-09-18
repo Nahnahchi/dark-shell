@@ -29,6 +29,7 @@ class DarkSouls(DSProcess):
                 winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
                 ctypes.windll.user32.MessageBoxW(0, "DARK SOULS process is no longer running!",
                                                  "DARKSOULS.exe has exited", 0)
+                self.interface = None
                 return
             sleep(10)
 
@@ -109,20 +110,25 @@ class DarkSouls(DSProcess):
                 print("Failed to warp")
 
     def level_stat(self, s_name: str, s_level: int):
-        for stat in self.stats.keys():
-            if stat.value != s_name:
-                if stat != Stat.SLV:
-                    self.stats[stat] = self.get_stat(stat)
-            else:
-                new_stat = s_level
-                cur_stat = self.get_stat(stat)
-                soul_level = self.get_soul_level() + (new_stat - cur_stat)
-                self.stats[stat] = new_stat
-                self.stats[Stat.SLV] = soul_level
-                print("%s set to %d" % (stat.value.upper(), new_stat))
-        return self.level_up(self.stats)
+        try:
+            Stat(s_name)
+        except ValueError:
+            print("Wrong arguments: %s" % s_name)
+        else:
+            for stat in self.stats.keys():
+                if stat.value != s_name:
+                    if stat != Stat.SLV:
+                        self.stats[stat] = self.get_stat(stat)
+                else:
+                    new_stat = s_level
+                    cur_stat = self.get_stat(stat)
+                    soul_level = self.get_soul_level() + (new_stat - cur_stat)
+                    self.stats[stat] = new_stat
+                    self.stats[Stat.SLV] = soul_level
+                    print("%s set to %d" % (stat.value.upper(), new_stat))
+            return self.level_up(self.stats)
 
-    def create_item(self, i_name: str, i_count: int, func):
+    def create_item(self, i_name: str, i_count: int, func=None):
         if i_name not in self.items.keys():
             print("Wrong arguments: %s" % i_name)
         else:
@@ -194,41 +200,292 @@ class DarkSouls(DSProcess):
             infusion = DSInfusion(i.strip())
             self.infusions[infusion.get_name()] = infusion
 
+    def switch(self, command: str, arguments: list):
 
-class ArgSwitcher:
+        dark_souls = self
 
-    def __init__(self, process: DarkSouls):
-        self.game = process
+        class Switcher:
 
-    def switch(self, command, arguments):
-        case_name = DSCmp.get_method_name("case_" + command + "_", arguments[0])
-        case_method = getattr(self, case_name, self.case_set_default)
-        case_method(arguments)
+            @classmethod
+            def switch(cls):
+                case_name = DSCmp.get_method_name(command + "_", arguments[0])
+                default = getattr(cls, command + "_default")
+                case_method = getattr(cls, case_name, default)
+                case_method()
 
-    def case_set_speed_game(self, args):
-        if self.game.set_game_speed(float(args[1])):
-            print("Game speed changed to %s" % args[1])
+            @staticmethod
+            def set_default():
+                stat_name = arguments[0]
+                stat_value = int(arguments[1])
+                if not dark_souls.level_stat(stat_name, stat_value):
+                    print("Failed to level")
 
-    def case_set_phantom_type(self, args):
-        if self.game.set_phantom_type(int(args[1])):
-            print("Phantom type set to %s" % args[1])
+            @staticmethod
+            def get_default():
+                flag_id = int(arguments[0])
+                print("FLAG %d: %s" % (flag_id, dark_souls.read_event_flag(flag_id)))
 
-    def case_set_team_type(self, args):
-        if self.game.set_team_type(int(args[1])):
-            print("Team type set to %s" % args[1])
+            @staticmethod
+            def enable_default():
+                flag_id = int(arguments[0])
+                enable = arguments[1]
+                if dark_souls.write_event_flag(flag_id, enable):
+                    print("EVENT FLAG %d %s" % (flag_id, ("enabled" if enable else "disabled")))
 
-    def case_set_sls(self, args):
-        if self.game.set_souls(int(args[1])):
-            print("Souls set to %s" % args[1])
+            @staticmethod
+            def set_speed_game():
+                speed = float(arguments[1])
+                if dark_souls.set_game_speed(speed):
+                    print("Game speed changed to %f" % speed)
 
-    def case_set_hum(self, args):
-        if self.game.set_humanity(int(args[1])):
-            print("Humanity set to %s" % args[1])
+            @staticmethod
+            def set_phantom_type():
+                phantom_type = int(arguments[1])
+                if dark_souls.set_phantom_type(phantom_type):
+                    print("Phantom type set to %d" % phantom_type)
 
-    def case_set_default(self, args):
-        try:
-            Stat(args[0])
-        except ValueError:
-            print("Wrong arguments: %s" % args[0])
-        if not self.game.level_stat(args[0], int(args[1])):
-            print("Failed to level")
+            @staticmethod
+            def set_team_type():
+                team_type = int(arguments[1])
+                if dark_souls.set_team_type(team_type):
+                    print("Team type set to %d" % team_type)
+
+            @staticmethod
+            def set_sls():
+                souls = int(arguments[1])
+                if dark_souls.set_souls(souls):
+                    print("Souls set to %d" % souls)
+
+            @staticmethod
+            def set_hum():
+                humanity = int(arguments[1])
+                if dark_souls.set_humanity(humanity):
+                    print("Humanity set to %d" % humanity)
+
+            @staticmethod
+            def get_stats():
+                dark_souls.print_stats()
+
+            @staticmethod
+            def enable_super_armor():
+                enable = arguments[1]
+                if dark_souls.set_super_armor(enable):
+                    print("SUPER ARMOR %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_draw():
+                enable = arguments[1]
+                if dark_souls.set_draw_enable(enable):
+                    print("DRAW %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_gravity():
+                enable = arguments[1]
+                if dark_souls.set_no_gravity(not enable):
+                    print("GRAVITY %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_dead():
+                enable = arguments[1]
+                if dark_souls.set_no_dead(enable):
+                    print("NO DEAD %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_stamina_consume():
+                enable = arguments[1]
+                if dark_souls.set_no_stamina_consume(enable):
+                    print("NO STAMINA CONSUME %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_goods_consume():
+                enable = arguments[1]
+                if dark_souls.set_no_goods_consume(enable):
+                    print("NO GOODS CONSUME %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_update():
+                enable = arguments[1]
+                if dark_souls.set_no_update(enable):
+                    print("NO UPDATE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_attack():
+                enable = arguments[1]
+                if dark_souls.set_no_attack(enable):
+                    print("NO ATTACK %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_move():
+                enable = arguments[1]
+                if dark_souls.set_no_move(enable):
+                    print("NO MOVE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_damage():
+                enable = arguments[1]
+                if dark_souls.set_no_damage(enable):
+                    print("NO DAMAGE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_hit():
+                enable = arguments[1]
+                if dark_souls.set_no_hit(enable):
+                    print("NO HIT %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_magic_all():
+                enable = arguments[1]
+                if dark_souls.set_no_magic_all(enable):
+                    print("NO MAGIC ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_ammo_consume_all():
+                enable = arguments[1]
+                if dark_souls.set_no_ammo_consume_all(enable):
+                    print("NO AMMO CONSUME ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_dead_all():
+                enable = arguments[1]
+                if dark_souls.set_no_dead_all(enable):
+                    print("NO DEAD ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_damage_all():
+                enable = arguments[1]
+                if dark_souls.set_no_damage_all(enable):
+                    print("NO DAMAGE ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_hit_all():
+                enable = arguments[1]
+                if dark_souls.set_no_hit_all(enable):
+                    print("NO HIT ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_attack_all():
+                enable = arguments[1]
+                if dark_souls.set_no_attack_all(enable):
+                    print("NO ATTACK ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_no_move_all():
+                enable = arguments[1]
+                if dark_souls.set_no_move_all(enable):
+                    print("NO MOVE ALL %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_death_cam():
+                enable = arguments[1]
+                if dark_souls.death_cam(enable):
+                    print("DEATH CAM %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_player_dead_mode():
+                enable = arguments[1]
+                if dark_souls.set_player_dead_mode(enable):
+                    print("PLAYER DEAD MODE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_player_exterminate():
+                enable = arguments[1]
+                if dark_souls.set_exterminate(enable):
+                    print("PLAYER EXTERMINATE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_player_hide():
+                enable = arguments[1]
+                if dark_souls.set_hide(enable):
+                    print("PLAYER HIDE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_player_silence():
+                enable = arguments[1]
+                if dark_souls.set_silence(enable):
+                    print("PLAYER SILENCE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_event():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_event(enable):
+                    print("ALL AREA EVENT %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_enemies():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_enemies(enable):
+                    print("ALL AREA ENEMIES %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_map():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_map(enable):
+                    print("ALL AREA MAP %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_obj():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_obj(enable):
+                    print("ALL AREA OBJ %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_obj_break():
+                enable = arguments[1]
+                if dark_souls.enable_all_area_obj_break(enable):
+                    print("ALL AREA OBJ BREAK %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_hi_hit():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_hi_hit(enable):
+                    print("ALL AREA HI HIT %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_lo_hit():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_lo_hit(enable):
+                    print("ALL AREA LO HIT %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_sfx():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_sfx(enable):
+                    print("ALL AREA SFX %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_sound():
+                enable = not arguments[1]
+                if dark_souls.disable_all_area_sound(enable):
+                    print("ALL AREA SOUND %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_obj_break_record_mode():
+                enable = arguments[1]
+                if dark_souls.enable_obj_break_record_mode(enable):
+                    print("OBJ BREAK RECORD MODE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_auto_map_warp_mode():
+                enable = arguments[1]
+                if dark_souls.enable_auto_map_warp_mode(enable):
+                    print("AUTO MAP WARP MODE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_chr_npc_wander_test():
+                enable = arguments[1]
+                if dark_souls.enable_chr_npc_wander_test(enable):
+                    print("CHR NPC WANDER TEST %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_dbg_chr_all_dead():
+                enable = arguments[1]
+                if dark_souls.enable_dbg_chr_all_dead(enable):
+                    print("DBG CHR ALL DEAD %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def enable_online_mode():
+                enable = arguments[1]
+                if dark_souls.enable_online_mode(enable):
+                    print("ONLINE MODE %s" % ("enabled" if enable else "disabled"))
+
+        Switcher.switch()
