@@ -14,6 +14,6 @@ disable npc
 warp firelink-shrine bonfire
 end
 ```
-Pass the script to the program as a parameter: `python dark_shell.py myscript.txt`
+Pass the script to the program as a parameter: `python dark_shell.py myscript.txt`.
 
-To manage event flags type `enable [flag-id]` or `disable [flag-id]`, to read flags: `get [flag-id]`
+To manage event flags type `enable [flag-id]` or `disable [flag-id]`, to read flags: `get [flag-id]`.
