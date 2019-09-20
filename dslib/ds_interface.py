@@ -1,6 +1,6 @@
 from ctypes import WinDLL, byref, sizeof, create_unicode_buffer
-from ctypes import POINTER, c_size_t, c_char_p, c_ulong, c_long, c_float, c_int, c_byte
-from ctypes.wintypes import HANDLE, LPCVOID, LPVOID, LPDWORD, DWORD, BOOL
+from ctypes import POINTER, c_size_t, c_char_p, c_wchar_p, c_ulong, c_long, c_float, c_int, c_byte
+from ctypes.wintypes import HANDLE, LPCVOID, LPVOID, LPDWORD, DWORD, PDWORD, BOOL
 from fasm import fasm
 import win32api
 import win32con
@@ -24,6 +24,9 @@ class DSInterface:
 
     virtual_free_ex = kernel32.VirtualFreeEx
     virtual_free_ex.argtypes = (HANDLE, LPVOID, c_size_t, DWORD)
+
+    virtual_protect_ex = kernel32.VirtualProtectEx
+    virtual_protect_ex.argtypes = (HANDLE, LPVOID, c_size_t, DWORD, PDWORD)
 
     create_remote_thread = kernel32.CreateRemoteThread
     create_remote_thread.argtypes = (HANDLE, LPVOID, c_size_t, c_int, LPVOID, DWORD, LPDWORD)
@@ -122,7 +125,15 @@ class DSInterface:
         count = c_ulong(0)
         length = len(data)
         c_data = c_char_p(data[count.value:])
-        c_int(0)
+        if DSInterface.write_process_memory(self.process.handle, address, c_data, length, byref(count)):
+            return True
+        else:
+            print("Failed to write memory - error code: ", DSInterface.get_last_error())
+            return False
+
+    def write_str(self, address, data: str, length: int):
+        count = c_ulong(0)
+        c_data = c_wchar_p(data[count.value:])
         if DSInterface.write_process_memory(self.process.handle, address, c_data, length, byref(count)):
             return True
         else:

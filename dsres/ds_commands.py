@@ -869,7 +869,7 @@ DS_BOOL = {
     "player-hide": None,
     "player-silence": None,
     "event": None,
-    "enemies": None,
+    "npc": None,
     "map": None,
     "obj": None,
     "obj-break": None,
@@ -1037,6 +1037,20 @@ DS_NEST = {
         "speed-game": None,
         "phantom-type": None,
         "team-type": None,
+        "ng": None,
+        "name": None,
+        "covenant": {
+            "none": None,
+            "way-of-white": None,
+            "princess's-guard": None,
+            "warrior-of-sunlight": None,
+            "darkwraith": None,
+            "path-of-the-gragon": None,
+            "gravelord-servant": None,
+            "forest-hunter": None,
+            "darkmoon-blade": None,
+            "chaos-servant": None
+        }
     },
     "get": {
         "stats": None,

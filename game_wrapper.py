@@ -21,6 +21,7 @@ class DarkSouls(DSProcess):
         self.bonfires = defaultdict(DSBonfire)
         self.items = defaultdict(DSItem)
         self.infusions = defaultdict(DSInfusion)
+        self.covenants = defaultdict(int)
         self.stats = defaultdict(int)
 
     def check_alive(self):
@@ -46,10 +47,10 @@ class DarkSouls(DSProcess):
         return i_name, i_count
 
     @staticmethod
-    def get_upgrade_value_infusable(infusions: list):
+    def get_upgrade_value_infusable(infusions: list, item: DSItem):
         infusion = radiolist_dialog(
             title="Select infusion type",
-            text="How would you like this weapon to be upgraded?",
+            text="How would you like %s to be upgraded?" % item.get_name().upper().replace("-", " "),
             values=infusions
         ).run()
         if infusion is None:
@@ -65,7 +66,7 @@ class DarkSouls(DSProcess):
         is_pyro_asc = item.get_upgrade_type() == Upgrade.PYRO_FLAME_ASCENDED
         max_upgrade = 5 if is_pyro_asc else 15
         upgrade = input_dialog(
-            title="Enter upgrade value",
+            title="Enter upgrade value for %s" % item.get_name().upper().replace("-", " "),
             text="Item type: %sPyromancy Flame" % "Ascended " if is_pyro_asc else ""
         ).run()
         if int(upgrade) > max_upgrade or int(upgrade) < 0:
@@ -78,7 +79,7 @@ class DarkSouls(DSProcess):
         is_unique = item.get_upgrade_type() == Upgrade.UNIQUE
         max_upgrade = 5 if is_unique else 10
         upgrade = input_dialog(
-            title="Enter upgrade value",
+            title="Enter upgrade value for %s" % item.get_name().upper().replace("-", " "),
             text="Item type: %s" % "Unique" if is_unique else "Armor"
         ).run()
         if int(upgrade) > max_upgrade or int(upgrade) < 0:
@@ -165,7 +166,7 @@ class DarkSouls(DSProcess):
                     (self.infusions[key].get_name(), self.infusions[key].get_name().upper())
                     for key in self.infusions.keys()
                 ]
-                upgrade, infusion = DarkSouls.get_upgrade_value_infusable(values)
+                upgrade, infusion = DarkSouls.get_upgrade_value_infusable(values, item)
                 if upgrade is None:
                     return
                 i_id = infuse(item, self.infusions[infusion], int(upgrade))
@@ -195,10 +196,16 @@ class DarkSouls(DSProcess):
                 self.items[item.get_name()] = item
 
     def read_infusions(self):
-        infusions = open("dsres/infusions.txt").readlines()
+        infusions = open("dsres/infusions.txt", "r").readlines()
         for i in infusions:
             infusion = DSInfusion(i.strip())
             self.infusions[infusion.get_name()] = infusion
+
+    def read_covenants(self):
+        covenants = open("dsres/covenants.txt", "r").readlines()
+        for c in covenants:
+            covenant = c.split()
+            self.covenants[covenant[1]] = int(covenant[0])
 
     def switch(self, command: str, arguments: list):
 
@@ -208,7 +215,7 @@ class DarkSouls(DSProcess):
 
             @classmethod
             def switch(cls):
-                case_name = DSCmp.get_method_name(command + "_", arguments[0])
+                case_name = DSCmp.get_method_name(prefix=command+"_", name=arguments[0])
                 default = getattr(cls, command + "_default")
                 case_method = getattr(cls, case_name, default)
                 case_method()
@@ -261,6 +268,26 @@ class DarkSouls(DSProcess):
                 humanity = int(arguments[1])
                 if dark_souls.set_humanity(humanity):
                     print("Humanity set to %d" % humanity)
+
+            @staticmethod
+            def set_name():
+                name = " ".join(arguments[1:])
+                if dark_souls.set_name(name):
+                    print("Name set to %s" % name)
+
+            @staticmethod
+            def set_ng():
+                new_game = int(arguments[1])
+                if dark_souls.set_ng_mode(new_game):
+                    print("NG+ changed to %d" % new_game)
+
+            @staticmethod
+            def set_covenant():
+                covenant_name = arguments[1]
+                if covenant_name in dark_souls.covenants.keys():
+                    covenant_id = dark_souls.covenants[covenant_name]
+                    if dark_souls.set_covenant(covenant_id):
+                        print("Covenant changed to '%s'" % covenant_name.replace("-", " "))
 
             @staticmethod
             def get_stats():
@@ -411,7 +438,7 @@ class DarkSouls(DSProcess):
                     print("ALL AREA EVENT %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
-            def enable_enemies():
+            def enable_npc():
                 enable = not arguments[1]
                 if dark_souls.disable_all_area_enemies(enable):
                     print("ALL AREA ENEMIES %s" % ("enabled" if enable else "disabled"))

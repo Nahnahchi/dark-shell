@@ -49,7 +49,7 @@ class DSCmp:
 
     def execute_command(self, command, arguments):
         try:
-            getattr(self, DSCmp.get_method_name(DSCmp.com_prefix, command))(arguments)
+            getattr(self, DSCmp.get_method_name(prefix=DSCmp.com_prefix, name=command))(arguments)
         except AttributeError as e:
             print("%s: %s" % (type(e).__name__, e))
 
@@ -62,7 +62,7 @@ class DSCmp:
                     c = parser.get_command()
                     a = parser.get_arguments()
                     self.execute_command(c, a)
-            except (PermissionError, FileNotFoundError) as e:
+            except (PermissionError, FileNotFoundError, EOFError) as e:
                 print("%s: %s" % (type(e).__name__, e))
 
     def do_help(self, args):
@@ -75,7 +75,7 @@ class DSCmp:
             commands = []
             for name in dir(self.__class__):
                 if name[:len(DSCmp.com_prefix)] == DSCmp.com_prefix:
-                    commands.append(name[len(DSCmp.com_prefix):].replace("_", "-"))
+                    commands.append(DSCmp.get_method_name(prefix="", name=name[len(DSCmp.com_prefix):]))
             commands.sort()
             for command in commands:
                 print("\t%s" % command)

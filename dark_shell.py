@@ -54,11 +54,12 @@ class DarkShell(DSCmp):
         rbn = Thread(target=self.game.read_bonfires)
         rit = Thread(target=self.game.read_items)
         rin = Thread(target=self.game.read_infusions)
-        rbn.start(), rit.start(), rin.start()
+        rco = Thread(target=self.game.read_covenants)
+        rbn.start(), rit.start(), rin.start(), rco.start()
         for stat in vars(Stat).values():
             if type(stat) == Stat:
                 self.game.stats[stat] = self.game.get_stat(stat)
-        rbn.join(), rit.join(), rin.join()
+        rbn.join(), rit.join(), rin.join(), rco.join()
 
     def do_pos_gui(self, args):
         try:
