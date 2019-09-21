@@ -7,7 +7,7 @@ from inspect import getfile, currentframe
 from collections import defaultdict
 from time import sleep
 from os import listdir
-from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog
+from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog
 import ctypes
 import winsound
 
@@ -86,6 +86,13 @@ class DarkSouls(DSProcess):
             print("Can't upgrade %s to +%s" % ("Unique" if is_unique else "Armor", upgrade))
             return None
         return upgrade
+
+    @staticmethod
+    def warn_disable_npc():
+        return yes_no_dialog(
+            title="Warning",
+            text="This command will kill all NPCs in the area. Do you want to proceed?"
+        ).run()
 
     def prepare(self):
         self.check_version()
@@ -180,7 +187,7 @@ class DarkSouls(DSProcess):
             print("Upgrade failed")
 
     def read_bonfires(self):
-        bonfires = open("dsres/bonfires.txt", "r").readlines()
+        bonfires = open("dsres/misc/bonfires.txt", "r").readlines()
         for b in bonfires:
             bonfire = DSBonfire(b.strip())
             self.bonfires[bonfire.get_name()] = bonfire
@@ -196,13 +203,13 @@ class DarkSouls(DSProcess):
                 self.items[item.get_name()] = item
 
     def read_infusions(self):
-        infusions = open("dsres/infusions.txt", "r").readlines()
+        infusions = open("dsres/misc/infusions.txt", "r").readlines()
         for i in infusions:
             infusion = DSInfusion(i.strip())
             self.infusions[infusion.get_name()] = infusion
 
     def read_covenants(self):
-        covenants = open("dsres/covenants.txt", "r").readlines()
+        covenants = open("dsres/misc/covenants.txt", "r").readlines()
         for c in covenants:
             covenant = c.split()
             self.covenants[covenant[1]] = int(covenant[0])
@@ -273,7 +280,7 @@ class DarkSouls(DSProcess):
             def set_name():
                 name = " ".join(arguments[1:])
                 if dark_souls.set_name(name):
-                    print("Name set to %s" % name)
+                    print("Name set to '%s'" % name)
 
             @staticmethod
             def set_ng():
@@ -440,6 +447,9 @@ class DarkSouls(DSProcess):
             @staticmethod
             def enable_npc():
                 enable = not arguments[1]
+                if enable:
+                    if not dark_souls.warn_disable_npc():
+                        return
                 if dark_souls.disable_all_area_enemies(enable):
                     print("ALL AREA ENEMIES %s" % ("enabled" if enable else "disabled"))
 

@@ -63,6 +63,8 @@ class DSOffsets:
         POS_Z = 0x18
 
     class CharDataB:
+        CHAR_NAME = 0xA0
+        COVENANT = 0x10B
         HP = 0xC
         HP_MOD_MAX = 0x10
         HP_MAX = 0x14
@@ -126,6 +128,9 @@ class DSOffsets:
         EQUIP_ITEM_5_ID = 0x298
         GESTURES_EQUIPPED_POINTER = 0x334
         GESTURES_UNLOCKED_POINTER = 0x424
+
+    class CharDataC:
+        NEW_GAME_MODE = 0x3C
 
     class GraphicsData:
         DRAW_DEPTH_TEX_EDGE = 0x23F

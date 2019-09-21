@@ -15,6 +15,7 @@ class Data(Enum):
     CHAR_POS_DATA = auto()
     CHAR_MAP_DATA = auto()
     CHAR_DATA_B = auto()
+    CHAR_DATA_C = auto()
     GRAPHICS_DATA = auto()
     WORLD_STATE = auto()
     MENU_MANAGER = auto()
@@ -132,6 +133,8 @@ class DSProcess:
 
         pointer1 = read_mem(offsets.CHAR_DATA_POINTER_B1)
         pointers[Data.CHAR_DATA_B] = read_mem(pointer1 + offsets.CHAR_DATA_POINTER_B2)
+
+        pointers[Data.CHAR_DATA_C] = read_mem(offsets.CHAR_DATA_POINTER_B1)
 
         pointer1 = read_mem(offsets.GRAPHICS_DATA_POINTER_1)
         pointers[Data.GRAPHICS_DATA] = read_mem(pointer1 + offsets.GRAPHICS_DATA_POINTER_2)
@@ -629,17 +632,15 @@ class DSProcess:
         return self.interface.write_int(self.pointers[Data.WORLD_STATE] +
                                         self.offsets.WorldState.LAST_BONFIRE, bonfire_id)
 
-    def get_name(self):
-        return self.interface.read_str(self.offsets.CHAR_NAME)
-
     def set_name(self, name: str):
-        return self.interface.write_str(self.offsets.CHAR_NAME, name, 128)
+        return self.interface.write_str(self.pointers[Data.CHAR_DATA_B] +
+                                        self.offsets.CharDataB.CHAR_NAME, name, length=128)
 
     def set_covenant(self, value: int):
-        return self.interface.write_int(self.offsets.COVENANT, value)
+        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.COVENANT, value)
 
     def set_ng_mode(self, value: int):
-        return self.interface.write_int(self.offsets.NEW_GAME_MODE, value)
+        return self.interface.write_int(self.pointers[Data.CHAR_DATA_C] + self.offsets.CharDataC.NEW_GAME_MODE, value)
 
     def item_drop(self, category, item_id, count):
         return \

@@ -41,7 +41,7 @@ class DSCmp:
                 completer=self.completer,
                 history=self.history,
                 enable_history_search=True
-            ).lower()
+            )
             parser = DSParser(user_inp)
             command = parser.get_command()
             arguments = parser.get_arguments()
