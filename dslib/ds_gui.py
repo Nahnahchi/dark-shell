@@ -96,6 +96,138 @@ class DSGraphicsGUI(Tk):
         Checkbutton(debug, text="Bounding Boxes", var=self.bounding_boxes,
                     command=self.set_draw_bounding_boxes).grid(row=1, column=1, sticky="W")
 
+        filter_ = LabelFrame(self, text="Filter")
+        filter_.pack()
+        self.override_filter = BooleanVar()
+        self.override_filter.set(False)
+        Checkbutton(filter_, text="Override Filter", var=self.override_filter,
+                    command=self.set_override_filter).grid(row=0, column=0, sticky="W")
+
+        Label(filter_, text="Brightness (RGB)").grid(row=1, column=0, sticky="W")
+        self.sync_brightness = BooleanVar()
+        self.sync_brightness.set(True)
+        Checkbutton(filter_, text="Synchronize", var=self.sync_brightness).grid(row=1, column=1, sticky="W")
+
+        self.brightness_r = StringVar()
+        self.brightness_r.set(1.000)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_r, width=15,
+                command=self.set_brightness_r).grid(row=2, column=0, sticky="W")
+
+        self.brightness_g = StringVar()
+        self.brightness_g.set(1.000)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_g, width=15,
+                command=self.set_brightness_g).grid(row=2, column=1, sticky="W")
+
+        self.brightness_b = StringVar()
+        self.brightness_b.set(1.000)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_b, width=15,
+                command=self.set_brightness_b).grid(row=2, column=2, sticky="W")
+
+        Label(filter_, text="Contrast (RGB)").grid(row=3, column=0, sticky="W")
+        self.sync_contrast = BooleanVar()
+        self.sync_contrast.set(True)
+        Checkbutton(filter_, text="Synchronize", var=self.sync_contrast).grid(row=3, column=1, sticky="W")
+
+        self.contrast_r = StringVar()
+        self.contrast_r.set(1.500)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_r, width=15,
+                command=self.set_contrast_r).grid(row=4, column=0, sticky="W")
+
+        self.contrast_g = StringVar()
+        self.contrast_g.set(1.500)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_g, width=15,
+                command=self.set_contrast_g).grid(row=4, column=1, sticky="W")
+
+        self.contrast_b = StringVar()
+        self.contrast_b.set(1.500)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_b, width=15,
+                command=self.set_contrast_b).grid(row=4, column=2, sticky="W")
+
+        Label(filter_, text="Saturation").grid(row=5, column=0, sticky="W")
+        Label(filter_, text="Hue").grid(row=5, column=2, sticky="W")
+        self.saturation = StringVar()
+        self.saturation.set(1.000)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.saturation, width=15,
+                command=self.set_saturation).grid(row=6, column=0, sticky="W")
+        self.hue = StringVar()
+        self.hue.set(0.000)
+        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.hue, width=15,
+                command=self.set_hue).grid(row=6, column=2, sticky="W")
+
+    def set_override_filter(self):
+        self.process.override_filter(self.override_filter.get())
+        if self.override_filter.get():
+            self.set_brightness_r(), self.set_contrast_r()
+            self.set_brightness_g(), self.set_contrast_g()
+            self.set_brightness_b(), self.set_contrast_b()
+            self.set_saturation(), self.set_hue()
+
+    def set_brightness_r(self):
+        if self.sync_brightness.get():
+            self.brightness_b.set(self.brightness_r.get())
+            self.brightness_g.set(self.brightness_r.get())
+        self.process.set_brightness(
+            float(self.brightness_r.get()),
+            float(self.brightness_g.get()),
+            float(self.brightness_b.get())
+        )
+
+    def set_brightness_g(self):
+        if self.sync_brightness.get():
+            self.brightness_b.set(self.brightness_g.get())
+            self.brightness_r.set(self.brightness_g.get())
+        self.process.set_brightness(
+            float(self.brightness_r.get()),
+            float(self.brightness_g.get()),
+            float(self.brightness_b.get())
+        )
+
+    def set_brightness_b(self):
+        if self.sync_brightness:
+            self.brightness_r.set(self.brightness_b.get())
+            self.brightness_g.set(self.brightness_b.get())
+        self.process.set_brightness(
+            float(self.brightness_r.get()),
+            float(self.brightness_g.get()),
+            float(self.brightness_b.get())
+        )
+
+    def set_contrast_r(self):
+        if self.sync_contrast.get():
+            self.contrast_g.set(self.contrast_r.get())
+            self.contrast_b.set(self.contrast_r.get())
+        self.process.set_contrast(
+            float(self.contrast_r.get()),
+            float(self.contrast_g.get()),
+            float(self.contrast_b.get())
+        )
+
+    def set_contrast_g(self):
+        if self.sync_contrast.get():
+            self.contrast_r.set(self.contrast_g.get())
+            self.contrast_b.set(self.contrast_g.get())
+        self.process.set_contrast(
+            float(self.contrast_r.get()),
+            float(self.contrast_g.get()),
+            float(self.contrast_b.get())
+        )
+
+    def set_contrast_b(self):
+        if self.sync_contrast.get():
+            self.contrast_g.set(self.contrast_b.get())
+            self.contrast_r.set(self.contrast_b.get())
+        self.process.set_contrast(
+            float(self.contrast_r.get()),
+            float(self.contrast_g.get()),
+            float(self.contrast_b.get())
+        )
+
+    def set_saturation(self):
+        self.process.set_saturation(float(self.saturation.get()))
+
+    def set_hue(self):
+        self.process.set_hue(float(self.hue.get()))
+
     def set_draw_map(self):
         self.process.draw_map(self.draw_map.get())
 
@@ -250,4 +382,3 @@ class DSPositionGUI(Tk):
     def on_quit(self):
         self.exit_flag = True
         self.destroy()
-

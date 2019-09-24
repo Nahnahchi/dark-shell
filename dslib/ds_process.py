@@ -431,11 +431,11 @@ class DSProcess:
         self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_B, blue)
 
     def set_saturation(self, saturation: float):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
+        return self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] +
                                         self.offsets.GraphicsData.SATURATION, saturation)
 
     def set_hue(self, hue: float):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.HUE, hue)
+        return self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.HUE, hue)
 
     def get_class(self):
         return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.CLASS)
