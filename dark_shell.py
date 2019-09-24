@@ -1,7 +1,7 @@
 from dslib.ds_process import Stat
 from dslib.ds_gui import DSPositionGUI, DSGraphicsGUI
 from dslib.ds_cmprocessor import DSCmp
-from dsres.ds_commands import DS_NEST
+from dsres.ds_commands import DS_NEST, DS_STATIC
 from game_wrapper import DarkSouls
 from prompt_toolkit.shortcuts import set_title
 from threading import Thread
@@ -15,6 +15,7 @@ class DarkShell(DSCmp):
 
     def __init__(self, script=None):
         super(DarkShell, self).__init__()
+        self.run_static = True if script is None else False
         self.game = DarkSouls()
         self.set_completer(DS_NEST)
         self.execute_source(script)
@@ -51,15 +52,31 @@ class DarkShell(DSCmp):
             Thread(target=self.game.disable_fps_disconnect).start()
         except Exception as e:
             print("%s: %s\nCouldn't attach to the DARK SOULS process" % (type(e).__name__, e))
-        rbn = Thread(target=self.game.read_bonfires)
-        rit = Thread(target=self.game.read_items)
-        rin = Thread(target=self.game.read_infusions)
-        rco = Thread(target=self.game.read_covenants)
-        rbn.start(), rit.start(), rin.start(), rco.start()
-        for stat in vars(Stat).values():
-            if type(stat) == Stat:
-                self.game.stats[stat] = self.game.get_stat(stat)
-        rbn.join(), rit.join(), rin.join(), rco.join()
+        else:
+            rbn = Thread(target=self.game.read_bonfires)
+            rit = Thread(target=self.game.read_items)
+            rin = Thread(target=self.game.read_infusions)
+            rco = Thread(target=self.game.read_covenants)
+            rbn.start(), rit.start(), rin.start(), rco.start()
+            for stat in vars(Stat).values():
+                if type(stat) == Stat:
+                    self.game.stats[stat] = self.game.get_stat(stat)
+            rbn.join(), rit.join(), rin.join(), rco.join()
+            if self.run_static:
+                self.execute_source(DarkSouls.STATIC_SOURCE)
+
+    @staticmethod
+    def help_static():
+        print("\nUsage:\tstatic [command [args]]")
+        print("\nOptions:")
+        for opt in DS_STATIC.keys():
+            print("\t%s" % opt)
+
+    def do_static(self, args):
+        if args[0] not in DS_STATIC.keys():
+            print("Command '%s' can't be static!" % args[0])
+        else:
+            self.game.switch(command="static", arguments=args)
 
     def do_pos_gui(self, args):
         try:
@@ -70,7 +87,7 @@ class DarkShell(DSCmp):
 
     def do_graphics_gui(self, args):
         try:
-            #self.game.prepare()
+            self.game.prepare()
             DSGraphicsGUI(process=self.game).mainloop()
         except Exception as e:
             print("%s: %s\nCouldn't launch graphics GUI" % (type(e).__name__, e))

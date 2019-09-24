@@ -885,7 +885,51 @@ DS_BOOL = {
     "online-mode": None
 }
 
+DS_STATIC = {
+    "list": None,
+    "clean": None,
+    "unlock-all-gestures": None,
+    "set": {
+        "vit": None,
+        "atn": None,
+        "end": None,
+        "str": None,
+        "dex": None,
+        "res": None,
+        "int": None,
+        "fth": None,
+        "sls": None,
+        "hum": None,
+        "speed-game": None,
+        "phantom-type": None,
+        "team-type": None,
+        "ng": None,
+        "name": None,
+        "covenant": {
+            "none": None,
+            "way-of-white": None,
+            "princess's-guard": None,
+            "warrior-of-sunlight": None,
+            "darkwraith": None,
+            "path-of-the-gragon": None,
+            "gravelord-servant": None,
+            "forest-hunter": None,
+            "darkmoon-blade": None,
+            "chaos-servant": None
+        }
+    },
+    "get": {
+        "stats": None,
+    },
+    "enable": DS_BOOL,
+    "disable": DS_BOOL,
+    "item-get": DS_ITEM,
+    "item-drop": DS_ITEM,
+    "item-get-upgrade": DS_ITEM
+}
+
 DS_NEST = {
+    "static": DS_STATIC,
     "help": None,
     "clear": None,
     "begin": None,
@@ -1024,6 +1068,9 @@ DS_NEST = {
             "sunlight-altar": None
         }
     },
+    "get": {
+        "stats": None,
+    },
     "set": {
         "vit": None,
         "atn": None,
@@ -1052,9 +1099,6 @@ DS_NEST = {
             "darkmoon-blade": None,
             "chaos-servant": None
         }
-    },
-    "get": {
-        "stats": None,
     },
     "enable": DS_BOOL,
     "disable": DS_BOOL,

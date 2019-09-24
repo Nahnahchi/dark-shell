@@ -7,8 +7,8 @@ class DSParser:
 
     def __init__(self, args: str):
         args = args.split()
-        self.command = args[0]
-        self.arguments = args[1:]
+        self.command = args[0] if len(args) > 0 else ""
+        self.arguments = args[1:] if len(args) > 1 else ""
 
     def get_command(self):
         return self.command
@@ -49,7 +49,11 @@ class DSCmp:
 
     def execute_command(self, command, arguments):
         try:
-            getattr(self, DSCmp.get_method_name(prefix=DSCmp.com_prefix, name=command))(arguments)
+            getattr(self,
+                    DSCmp.get_method_name(
+                        prefix=DSCmp.com_prefix,
+                        name=command if command.strip() else "default")
+                    )(arguments)
         except AttributeError as e:
             print("%s: %s" % (type(e).__name__, e))
 
@@ -68,14 +72,20 @@ class DSCmp:
     def do_help(self, args):
         if len(args) > 0:
             try:
-                getattr(self, DSCmp.help_prefix + args[0])()
+                getattr(self, DSCmp.get_method_name(prefix=DSCmp.help_prefix, name=args[0]))()
             except AttributeError as e:
                 print("%s: %s" % (type(e).__name__, e))
         else:
             commands = []
             for name in dir(self.__class__):
-                if name[:len(DSCmp.com_prefix)] == DSCmp.com_prefix:
-                    commands.append(DSCmp.get_method_name(prefix="", name=name[len(DSCmp.com_prefix):]))
+                prefix_len = len(DSCmp.com_prefix)
+                if name[:prefix_len] == DSCmp.com_prefix:
+                    com_name = name[prefix_len:]
+                    if com_name != "default":
+                        commands.append(DSCmp.get_method_name(prefix="", name=com_name))
             commands.sort()
             for command in commands:
                 print("\t%s" % command)
+
+    def do_default(self, args):
+        pass

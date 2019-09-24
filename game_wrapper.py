@@ -15,6 +15,7 @@ import winsound
 class DarkSouls(DSProcess):
 
     PROCESS_NAME = "DARK SOULS"
+    STATIC_SOURCE = "static"
 
     def __init__(self):
         super(DarkSouls, self).__init__()
@@ -248,6 +249,14 @@ class DarkSouls(DSProcess):
                 enable = arguments[1]
                 if dark_souls.write_event_flag(flag_id, enable):
                     print("EVENT FLAG %d %s" % (flag_id, ("enabled" if enable else "disabled")))
+
+            @staticmethod
+            def static_default():
+                with open(DarkSouls.STATIC_SOURCE, "a") as static_source:
+                    line = ""
+                    for arg in arguments:
+                        line += arg + " "
+                    static_source.write(line + "\n")
 
             @staticmethod
             def set_speed_game():
@@ -527,5 +536,15 @@ class DarkSouls(DSProcess):
                 enable = arguments[1]
                 if dark_souls.enable_online_mode(enable):
                     print("ONLINE MODE %s" % ("enabled" if enable else "disabled"))
+
+            @staticmethod
+            def static_list():
+                lines = open(DarkSouls.STATIC_SOURCE, "r").readlines()
+                for line in lines:
+                    print("\t", line)
+
+            @staticmethod
+            def static_clean():
+                open(DarkSouls.STATIC_SOURCE, "w").write("")
 
         Switcher.switch()
