@@ -845,6 +845,7 @@ DS_ITEM = {
 }
 
 DS_BOOL = {
+    "death-cam": None,
     "no-dead": None,
     "no-dead-all": None,
     "no-goods-consume": None,
@@ -891,11 +892,11 @@ DS_NEST = {
     "exit": None,
     "quit": None,
     "end": None,
-    "death-cam": None,
     "game-restart": None,
     "unlock-all-gestures": None,
     "menu-kick": None,
     "pos-gui": None,
+    "graphics-gui": None,
     "warp": {
         "bonfire": None,
         "abyss": {

@@ -1,5 +1,5 @@
 from dslib.ds_process import Stat
-from dslib.ds_gui import DSPositionGUI
+from dslib.ds_gui import DSPositionGUI, DSGraphicsGUI
 from dslib.ds_cmprocessor import DSCmp
 from dsres.ds_commands import DS_NEST
 from game_wrapper import DarkSouls
@@ -67,6 +67,13 @@ class DarkShell(DSCmp):
             DSPositionGUI(process=self.game).mainloop()
         except Exception as e:
             print("%s: %s\nCouldn't launch position GUI" % (type(e).__name__, e))
+
+    def do_graphics_gui(self, args):
+        try:
+            #self.game.prepare()
+            DSGraphicsGUI(process=self.game).mainloop()
+        except Exception as e:
+            print("%s: %s\nCouldn't launch graphics GUI" % (type(e).__name__, e))
 
     @staticmethod
     def help_set():

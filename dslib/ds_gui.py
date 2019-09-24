@@ -1,5 +1,5 @@
 from dslib.ds_process import DSProcess
-from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton
+from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton, LabelFrame
 from threading import Thread
 from time import sleep
 
@@ -14,6 +14,132 @@ class DSGraphicsGUI(Tk):
 
         self.title("GraphicsGUI")
         self.resizable(False, False)
+
+        render = LabelFrame(self, text="Render")
+        render.pack(fill="both")
+
+        self.draw_map = BooleanVar()
+        self.draw_map.set(True)
+        Checkbutton(render, text="Map", var=self.draw_map,
+                    command=self.set_draw_map).grid(row=0, column=0, sticky="W")
+
+        self.draw_creatures = BooleanVar()
+        self.draw_creatures.set(True)
+        Checkbutton(render, text="Creatures", var=self.draw_creatures,
+                    command=self.set_draw_creatures).grid(row=1, column=0, sticky="W")
+
+        self.draw_objects = BooleanVar()
+        self.draw_objects.set(True)
+        Checkbutton(render, text="Objects", var=self.draw_objects,
+                    command=self.set_draw_objects).grid(row=2, column=0, sticky="W")
+
+        self.draw_sfx = BooleanVar()
+        self.draw_sfx.set(True)
+        Checkbutton(render, text="SFX", var=self.draw_sfx,
+                    command=self.set_draw_sfx).grid(row=3, column=0, sticky="W")
+
+        self.draw_shadows = BooleanVar()
+        self.draw_shadows.set(True)
+        Checkbutton(render, text="Shadows", var=self.draw_shadows,
+                    command=self.set_draw_shadows).grid(row=0, column=1, sticky="W")
+
+        self.draw_sprite_shadows = BooleanVar()
+        self.draw_sprite_shadows.set(True)
+        Checkbutton(render, text="Sprite Shadows", var=self.draw_sprite_shadows,
+                    command=self.set_draw_sprite_shadows).grid(row=1, column=1, sticky="W")
+
+        self.draw_textures = BooleanVar()
+        self.draw_textures.set(True)
+        Checkbutton(render, text="Textures", var=self.draw_textures,
+                    command=self.set_draw_textures).grid(row=2, column=1, sticky="W")
+
+        self.normal_draw_tex_edge = BooleanVar()
+        self.normal_draw_tex_edge.set(True)
+        Checkbutton(render, text="NormalDraw_TexEdge", var=self.normal_draw_tex_edge,
+                    command=self.set_draw_sprites).grid(row=3, column=1, sticky="W")
+
+        self.depth_draw_depth_tex_edge = BooleanVar()
+        self.depth_draw_depth_tex_edge.set(True)
+        Checkbutton(render, text="DepthDraw_DepthTexEdge", var=self.depth_draw_depth_tex_edge,
+                    command=self.set_draw_sprite_masks).grid(row=4, column=1, sticky="W")
+
+        self.normal_draw_trans = BooleanVar()
+        self.normal_draw_trans.set(True)
+        Checkbutton(render, text="NormalDraw_Trans", var=self.normal_draw_trans,
+                    command=self.set_draw_trans).grid(row=5, column=1, sticky="W")
+
+        debug = LabelFrame(self, text="Debug")
+        debug.pack(fill="both")
+
+        self.large_compass = BooleanVar()
+        self.large_compass.set(False)
+        Checkbutton(debug, text="Large Compass", var=self.large_compass,
+                    command=self.set_draw_compass_large).grid(row=0, column=0, sticky="W")
+
+        self.small_compass = BooleanVar()
+        self.small_compass.set(False)
+        Checkbutton(debug, text="Small Compass", var=self.small_compass,
+                    command=self.set_draw_compass_small).grid(row=1, column=0, sticky="W")
+
+        self.altimeter = BooleanVar()
+        self.altimeter.set(False)
+        Checkbutton(debug, text="Altimeter", var=self.altimeter,
+                    command=self.set_draw_altimeter).grid(row=2, column=0, sticky="W")
+
+        self.node_graph = BooleanVar()
+        self.node_graph.set(False)
+        Checkbutton(debug, text="Node Graph", var=self.node_graph,
+                    command=self.set_draw_node_graph).grid(row=0, column=1, sticky="W")
+
+        self.bounding_boxes = BooleanVar()
+        self.bounding_boxes.set(False)
+        Checkbutton(debug, text="Bounding Boxes", var=self.bounding_boxes,
+                    command=self.set_draw_bounding_boxes).grid(row=1, column=1, sticky="W")
+
+    def set_draw_map(self):
+        self.process.draw_map(self.draw_map.get())
+
+    def set_draw_creatures(self):
+        self.process.draw_creatures(self.draw_creatures.get())
+
+    def set_draw_objects(self):
+        self.process.draw_objects(self.draw_objects.get())
+
+    def set_draw_sfx(self):
+        self.process.draw_sfx(self.draw_sfx.get())
+
+    def set_draw_shadows(self):
+        self.process.draw_shadows(self.draw_shadows.get())
+
+    def set_draw_sprite_shadows(self):
+        self.process.draw_sprite_shadows(self.draw_sprite_shadows.get())
+
+    def set_draw_textures(self):
+        self.process.draw_textures(self.draw_textures.get())
+
+    def set_draw_trans(self):
+        self.process.draw_trans(self.normal_draw_trans.get())
+
+    def set_draw_sprites(self):
+        self.process.draw_sprites(self.normal_draw_tex_edge.get())
+
+    def set_draw_sprite_masks(self):
+        self.process.draw_sprite_masks(self.depth_draw_depth_tex_edge.get())
+
+    def set_draw_compass_large(self):
+        self.process.draw_compass_large(self.large_compass.get())
+
+    def set_draw_compass_small(self):
+        self.process.draw_compass_small(self.small_compass.get())
+
+    def set_draw_altimeter(self):
+        self.process.draw_altimeter(self.altimeter.get())
+
+    def set_draw_node_graph(self):
+        self.process.draw_nodes(self.node_graph.get())
+
+    def set_draw_bounding_boxes(self):
+        self.process.draw_bounding(self.bounding_boxes.get())
 
 
 class DSPositionGUI(Tk):

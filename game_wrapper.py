@@ -126,6 +126,7 @@ class DarkSouls(DSProcess):
             for stat in self.stats.keys():
                 if stat.value != s_name:
                     if stat != Stat.SLV:
+
                         self.stats[stat] = self.get_stat(stat)
                 else:
                     new_stat = s_level
@@ -212,7 +213,9 @@ class DarkSouls(DSProcess):
         covenants = open("dsres/misc/covenants.txt", "r").readlines()
         for c in covenants:
             covenant = c.split()
-            self.covenants[covenant[1]] = int(covenant[0])
+            cov_id = int(covenant[0])
+            cov_name = covenant[1]
+            self.covenants[cov_name] = cov_id
 
     def switch(self, command: str, arguments: list):
 
@@ -286,7 +289,7 @@ class DarkSouls(DSProcess):
             def set_ng():
                 new_game = int(arguments[1])
                 if dark_souls.set_ng_mode(new_game):
-                    print("NG+ changed to %d" % new_game)
+                    print("NG changed to +%d" % new_game)
 
             @staticmethod
             def set_covenant():
@@ -294,7 +297,7 @@ class DarkSouls(DSProcess):
                 if covenant_name in dark_souls.covenants.keys():
                     covenant_id = dark_souls.covenants[covenant_name]
                     if dark_souls.set_covenant(covenant_id):
-                        print("Covenant changed to '%s'" % covenant_name.replace("-", " "))
+                        print("Covenant changed to %s" % covenant_name.upper().replace("-", " "))
 
             @staticmethod
             def get_stats():
@@ -440,29 +443,29 @@ class DarkSouls(DSProcess):
 
             @staticmethod
             def enable_event():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_event(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_event(not enable):
                     print("ALL AREA EVENT %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
             def enable_npc():
-                enable = not arguments[1]
-                if enable:
+                enable = arguments[1]
+                if not enable:
                     if not dark_souls.warn_disable_npc():
                         return
-                if dark_souls.disable_all_area_enemies(enable):
+                if dark_souls.disable_all_area_enemies(not enable):
                     print("ALL AREA ENEMIES %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
             def enable_map():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_map(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_map(not enable):
                     print("ALL AREA MAP %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
             def enable_obj():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_obj(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_obj(not enable):
                     print("ALL AREA OBJ %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
@@ -473,26 +476,26 @@ class DarkSouls(DSProcess):
 
             @staticmethod
             def enable_hi_hit():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_hi_hit(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_hi_hit(not enable):
                     print("ALL AREA HI HIT %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
             def enable_lo_hit():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_lo_hit(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_lo_hit(not enable):
                     print("ALL AREA LO HIT %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
             def enable_sfx():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_sfx(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_sfx(not enable):
                     print("ALL AREA SFX %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod
             def enable_sound():
-                enable = not arguments[1]
-                if dark_souls.disable_all_area_sound(enable):
+                enable = arguments[1]
+                if dark_souls.disable_all_area_sound(not enable):
                     print("ALL AREA SOUND %s" % ("enabled" if enable else "disabled"))
 
             @staticmethod

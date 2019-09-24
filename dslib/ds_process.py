@@ -190,7 +190,7 @@ class DSProcess:
         return self.interface.write_float(self.pointers[Data.ANIM_DATA] + self.offsets.AnimData.PLAY_SPEED, speed)
 
     def death_cam(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.UNKNOWN_B] + self.offsets.UnknownB.DEATH_CAM, int(enable))
+        return self.interface.write_bool(self.pointers[Data.UNKNOWN_B] + self.offsets.UnknownB.DEATH_CAM, enable)
 
     def game_restart(self):
         return self.interface.write_flag(self.pointers[Data.GAME_MAN] +
@@ -269,156 +269,156 @@ class DSProcess:
                                          self.offsets.CharFlagsA.SET_DEAD_MODE, enable)
 
     def set_no_magic_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_MAGIC_QTY_CONSUME, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_MAGIC_QTY_CONSUME, enable)
 
     def set_no_stamina_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_STAMINA_CONSUME, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_STAMINA_CONSUME, enable)
 
     def set_exterminate(self, enable: bool):
-        return self.interface.write_int(self.offsets.PLAYER_EXTERMINATE, int(enable))
+        return self.interface.write_bool(self.offsets.PLAYER_EXTERMINATE, enable)
 
     def set_no_ammo_consume_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_ARROW_CONSUME, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_ARROW_CONSUME, enable)
 
     def set_hide(self, enable: bool):
-        return self.interface.write_int(self.offsets.PLAYER_HIDE, int(enable))
+        return self.interface.write_bool(self.offsets.PLAYER_HIDE, enable)
 
     def set_silence(self, enable: bool):
-        return self.interface.write_int(self.offsets.PLAYER_SILENCE, int(enable))
+        return self.interface.write_bool(self.offsets.PLAYER_SILENCE, enable)
 
     def set_no_dead_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_DEAD, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_DEAD, enable)
 
     def set_no_damage_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_DAMAGE, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_DAMAGE, enable)
 
     def set_no_hit_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_HIT, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_HIT, enable)
 
     def set_no_attack_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_ATTACK, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_ATTACK, enable)
 
     def set_no_move_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_MOVE, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_MOVE, enable)
 
     def set_no_update_ai_all(self, enable: bool):
-        return self.interface.write_int(self.offsets.ALL_NO_UPDATE_AI, int(enable))
+        return self.interface.write_bool(self.offsets.ALL_NO_UPDATE_AI, enable)
 
     def disable_all_area_enemies(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, disable)
 
     def disable_all_area_event(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, disable)
 
     def disable_all_area_map(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_MAP, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_MAP, disable)
 
     def disable_all_area_obj(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, disable)
 
     def enable_all_area_obj(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, enable)
 
     def enable_all_area_obj_break(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, enable)
 
     def disable_all_area_hi_hit(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, disable)
 
     def disable_all_area_lo_hit(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, disable)
 
     def disable_all_area_sfx(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_SFX, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_SFX, disable)
 
     def disable_all_area_sound(self, disable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, int(disable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, disable)
 
     def enable_obj_break_record_mode(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, enable)
 
     def enable_auto_map_warp_mode(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_AUTO_MAP_WARP_MODE, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_AUTO_MAP_WARP_MODE, enable)
 
     def enable_chr_npc_wander_test(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_CHR_NPC_WANDER_TEST, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_CHR_NPC_WANDER_TEST, enable)
 
     def enable_dbg_chr_all_dead(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_DBG_CHR_ALL_DEAD, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_DBG_CHR_ALL_DEAD, enable)
 
     def enable_online_mode(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
-                                        self.offsets.GameMan.IS_ONLINE_MODE, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+                                         self.offsets.GameMan.IS_ONLINE_MODE, enable)
 
     def draw_bounding(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.DRAW_BOUNDING_BOXES, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.DRAW_BOUNDING_BOXES, enable)
 
     def draw_sprite_masks(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.DRAW_DEPTH_TEX_EDGE, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.DRAW_DEPTH_TEX_EDGE, enable)
 
     def draw_textures(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.DRAW_TEXTURES, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.DRAW_TEXTURES, enable)
 
     def draw_sprites(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.NORMAL_DRAW_TEX_EDGE, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.NORMAL_DRAW_TEX_EDGE, enable)
 
     def draw_trans(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.NORMAL_TRANS, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.NORMAL_TRANS, enable)
 
     def draw_shadows(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.DRAW_SHADOWS, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.DRAW_SHADOWS, enable)
 
     def draw_sprite_shadows(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.DRAW_SPRITE_SHADOWS, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.DRAW_SPRITE_SHADOWS, enable)
 
     def draw_map(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_MAP, int(enable))
+        return self.interface.write_bool(self.offsets.DRAW_MAP, enable)
 
     def draw_creatures(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_CREATURES, int(enable))
+        return self.interface.write_bool(self.offsets.DRAW_CREATURES, enable)
 
     def draw_objects(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_OBJECTS, int(enable))
+        return self.interface.write_bool(self.offsets.DRAW_OBJECTS, enable)
 
     def draw_sfx(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.DRAW_SFX, int(enable))
+        return self.interface.write_bool(self.offsets.DRAW_SFX, enable)
 
     def draw_compass_large(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.COMPASS_LARGE, int(enable))
+        return self.interface.write_bool(self.offsets.COMPASS_LARGE, enable)
 
     def draw_compass_small(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.COMPASS_SMALL, int(enable))
+        return self.interface.write_bool(self.offsets.COMPASS_SMALL, enable)
 
     def draw_altimeter(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.ALTIMETER, int(enable))
+        return self.interface.write_bool(self.offsets.ALTIMETER, enable)
 
     def draw_nodes(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] + self.offsets.NODE_GRAPH, int(enable))
+        return self.interface.write_bool(self.offsets.NODE_GRAPH, enable)
 
     def override_filter(self, enable: bool):
-        return self.interface.write_int(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.ENABLE_FILTER, int(enable))
+        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
+                                         self.offsets.GraphicsData.ENABLE_FILTER, enable)
 
     def set_brightness(self, red: float, green: float, blue: float):
         self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_R, red)
