@@ -2,13 +2,34 @@ from dslib.ds_process import DSProcess
 from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton, LabelFrame
 from threading import Thread
 from time import sleep
+from pickle import dump, load, UnpicklingError
 
 
 class DSGraphicsGUI(Tk):
 
+    SAVE_FILE = "dsres/save/graphics"
+    SAVED_DATA = {
+        "override f": False,
+        "sync br": True,
+        "sync co": True,
+        "brightness r": 1.000,
+        "brightness g": 1.000,
+        "brightness b": 1.000,
+        "contrast r": 1.500,
+        "contrast g": 1.500,
+        "contrast b": 1.500,
+        "saturation": 1.000,
+        "hue": 0.000
+    }
+
     def __init__(self, process: DSProcess):
 
         super(DSGraphicsGUI, self).__init__()
+
+        try:
+            saved = load(open(DSGraphicsGUI.SAVE_FILE, "rb"))
+        except (UnpicklingError, FileNotFoundError):
+            saved = DSGraphicsGUI.SAVED_DATA
 
         self.process = process
 
@@ -99,60 +120,93 @@ class DSGraphicsGUI(Tk):
         filter_ = LabelFrame(self, text="Filter")
         filter_.pack()
         self.override_filter = BooleanVar()
-        self.override_filter.set(False)
+        self.override_filter.set(saved["override f"])
         Checkbutton(filter_, text="Override Filter", var=self.override_filter,
                     command=self.set_override_filter).grid(row=0, column=0, sticky="W")
 
         Label(filter_, text="Brightness (RGB)").grid(row=1, column=0, sticky="W")
         self.sync_brightness = BooleanVar()
-        self.sync_brightness.set(True)
+        self.sync_brightness.set(saved["sync br"])
         Checkbutton(filter_, text="Synchronize", var=self.sync_brightness).grid(row=1, column=1, sticky="W")
 
         self.brightness_r = StringVar()
-        self.brightness_r.set(1.000)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_r, width=15,
-                command=self.set_brightness_r).grid(row=2, column=0, sticky="W")
+        self.brightness_r.set(saved["brightness r"])
+        box_br_r = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_r, width=15,
+                           command=self.set_brightness_r)
+        box_br_r.grid(row=2, column=0, sticky="W")
+        box_br_r.bind("<Return>", self.set_brightness_r)
 
         self.brightness_g = StringVar()
-        self.brightness_g.set(1.000)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_g, width=15,
-                command=self.set_brightness_g).grid(row=2, column=1, sticky="W")
+        self.brightness_g.set(saved["brightness g"])
+        box_br_g = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_g, width=15,
+                           command=self.set_brightness_g)
+        box_br_g.grid(row=2, column=1, sticky="W")
+        box_br_g.bind("<Return>", self.set_brightness_g)
 
         self.brightness_b = StringVar()
-        self.brightness_b.set(1.000)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_b, width=15,
-                command=self.set_brightness_b).grid(row=2, column=2, sticky="W")
+        self.brightness_b.set(saved["brightness b"])
+        box_br_b = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_b, width=15,
+                           command=self.set_brightness_b)
+        box_br_b.grid(row=2, column=2, sticky="W")
+        box_br_b.bind("<Return>", self.set_brightness_b)
 
         Label(filter_, text="Contrast (RGB)").grid(row=3, column=0, sticky="W")
         self.sync_contrast = BooleanVar()
-        self.sync_contrast.set(True)
+        self.sync_contrast.set(saved["sync co"])
         Checkbutton(filter_, text="Synchronize", var=self.sync_contrast).grid(row=3, column=1, sticky="W")
 
         self.contrast_r = StringVar()
-        self.contrast_r.set(1.500)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_r, width=15,
-                command=self.set_contrast_r).grid(row=4, column=0, sticky="W")
+        self.contrast_r.set(saved["contrast r"])
+        box_co_r = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_r, width=15,
+                           command=self.set_contrast_r)
+        box_co_r.grid(row=4, column=0, sticky="W")
+        box_co_r.bind("<Return>", self.set_contrast_r)
 
         self.contrast_g = StringVar()
-        self.contrast_g.set(1.500)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_g, width=15,
-                command=self.set_contrast_g).grid(row=4, column=1, sticky="W")
+        self.contrast_g.set(saved["contrast g"])
+        box_co_g = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_g, width=15,
+                           command=self.set_contrast_g)
+        box_co_g.grid(row=4, column=1, sticky="W")
+        box_co_g.bind("<Return>", self.set_contrast_g)
 
         self.contrast_b = StringVar()
-        self.contrast_b.set(1.500)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_b, width=15,
-                command=self.set_contrast_b).grid(row=4, column=2, sticky="W")
+        self.contrast_b.set(saved["contrast b"])
+        box_co_b = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_b, width=15,
+                           command=self.set_contrast_b)
+        box_co_b.grid(row=4, column=2, sticky="W")
+        box_co_b.bind("<Return>", self.set_contrast_b)
 
         Label(filter_, text="Saturation").grid(row=5, column=0, sticky="W")
         Label(filter_, text="Hue").grid(row=5, column=2, sticky="W")
         self.saturation = StringVar()
-        self.saturation.set(1.000)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.saturation, width=15,
-                command=self.set_saturation).grid(row=6, column=0, sticky="W")
+        self.saturation.set(saved["saturation"])
+        box_sat = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.saturation, width=15,
+                          command=self.set_saturation)
+        box_sat.grid(row=6, column=0, sticky="W")
+        box_sat.bind("<Return>", self.set_saturation)
         self.hue = StringVar()
-        self.hue.set(0.000)
-        Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.hue, width=15,
-                command=self.set_hue).grid(row=6, column=2, sticky="W")
+        self.hue.set(saved["hue"])
+        box_hue = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.hue, width=15,
+                          command=self.set_hue)
+        box_hue.grid(row=6, column=2, sticky="W")
+        box_hue.bind("<Return>", self.set_hue)
+
+        if saved["override f"]:
+            self.set_override_filter()
+
+    def save_all(self):
+        DSGraphicsGUI.SAVED_DATA["override f"] = self.override_filter.get()
+        DSGraphicsGUI.SAVED_DATA["sync br"] = self.sync_brightness.get()
+        DSGraphicsGUI.SAVED_DATA["sync co"] = self.sync_contrast.get()
+        DSGraphicsGUI.SAVED_DATA["brightness r"] = self.brightness_r.get()
+        DSGraphicsGUI.SAVED_DATA["contrast r"] = self.contrast_r.get()
+        DSGraphicsGUI.SAVED_DATA["brightness g"] = self.brightness_g.get()
+        DSGraphicsGUI.SAVED_DATA["contrast g"] = self.contrast_g.get()
+        DSGraphicsGUI.SAVED_DATA["brightness b"] = self.brightness_b.get()
+        DSGraphicsGUI.SAVED_DATA["contrast b"] = self.contrast_b.get()
+        DSGraphicsGUI.SAVED_DATA["saturation"] = self.saturation.get()
+        DSGraphicsGUI.SAVED_DATA["hue"] = self.hue.get()
+        dump(DSGraphicsGUI.SAVED_DATA, open(DSGraphicsGUI.SAVE_FILE, "wb"))
 
     def set_override_filter(self):
         self.process.override_filter(self.override_filter.get())
@@ -161,8 +215,9 @@ class DSGraphicsGUI(Tk):
             self.set_brightness_g(), self.set_contrast_g()
             self.set_brightness_b(), self.set_contrast_b()
             self.set_saturation(), self.set_hue()
+        self.save_all()
 
-    def set_brightness_r(self):
+    def set_brightness_r(self, *e):
         if self.sync_brightness.get():
             self.brightness_b.set(self.brightness_r.get())
             self.brightness_g.set(self.brightness_r.get())
@@ -171,8 +226,9 @@ class DSGraphicsGUI(Tk):
             float(self.brightness_g.get()),
             float(self.brightness_b.get())
         )
+        self.save_all()
 
-    def set_brightness_g(self):
+    def set_brightness_g(self, *e):
         if self.sync_brightness.get():
             self.brightness_b.set(self.brightness_g.get())
             self.brightness_r.set(self.brightness_g.get())
@@ -181,9 +237,10 @@ class DSGraphicsGUI(Tk):
             float(self.brightness_g.get()),
             float(self.brightness_b.get())
         )
+        self.save_all()
 
-    def set_brightness_b(self):
-        if self.sync_brightness:
+    def set_brightness_b(self, *e):
+        if self.sync_brightness.get():
             self.brightness_r.set(self.brightness_b.get())
             self.brightness_g.set(self.brightness_b.get())
         self.process.set_brightness(
@@ -191,8 +248,9 @@ class DSGraphicsGUI(Tk):
             float(self.brightness_g.get()),
             float(self.brightness_b.get())
         )
+        self.save_all()
 
-    def set_contrast_r(self):
+    def set_contrast_r(self, *e):
         if self.sync_contrast.get():
             self.contrast_g.set(self.contrast_r.get())
             self.contrast_b.set(self.contrast_r.get())
@@ -201,8 +259,9 @@ class DSGraphicsGUI(Tk):
             float(self.contrast_g.get()),
             float(self.contrast_b.get())
         )
+        self.save_all()
 
-    def set_contrast_g(self):
+    def set_contrast_g(self, *e):
         if self.sync_contrast.get():
             self.contrast_r.set(self.contrast_g.get())
             self.contrast_b.set(self.contrast_g.get())
@@ -211,8 +270,9 @@ class DSGraphicsGUI(Tk):
             float(self.contrast_g.get()),
             float(self.contrast_b.get())
         )
+        self.save_all()
 
-    def set_contrast_b(self):
+    def set_contrast_b(self, *e):
         if self.sync_contrast.get():
             self.contrast_g.set(self.contrast_b.get())
             self.contrast_r.set(self.contrast_b.get())
@@ -221,12 +281,15 @@ class DSGraphicsGUI(Tk):
             float(self.contrast_g.get()),
             float(self.contrast_b.get())
         )
+        self.save_all()
 
-    def set_saturation(self):
+    def set_saturation(self, *e):
         self.process.set_saturation(float(self.saturation.get()))
+        self.save_all()
 
-    def set_hue(self):
+    def set_hue(self, *e):
         self.process.set_hue(float(self.hue.get()))
+        self.save_all()
 
     def set_draw_map(self):
         self.process.draw_map(self.draw_map.get())

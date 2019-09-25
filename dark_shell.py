@@ -7,6 +7,7 @@ from prompt_toolkit.shortcuts import set_title
 from threading import Thread
 from os import system, _exit
 from sys import argv
+from time import sleep
 import win32gui
 import win32process
 
@@ -17,14 +18,32 @@ class DarkShell(DSCmp):
         super(DarkShell, self).__init__()
         self.run_static = True if script is None else False
         self.game = DarkSouls()
-        self.set_completer(DS_NEST)
+        self.set_nested_completer(DS_NEST)
         self.execute_source(script)
+
+    def execute_static_commands(self):
+        execute = True
+        while True:
+            if execute:
+                if self.game.can_read():
+                    self.execute_source(self.game.STATIC_SOURCE)
+                    execute = False
+                else:
+                    sleep(1)
+                    continue
+            if not self.game.can_read():
+                execute = True
+            sleep(1)
 
     @staticmethod
     def get_window_pid(title):
         hwnd = win32gui.FindWindow(None, title)
         thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
         return pid
+
+    @staticmethod
+    def do_clear(args):
+        system("cls")
 
     @staticmethod
     def do_exit(args):
@@ -38,14 +57,11 @@ class DarkShell(DSCmp):
     def do_end(args):
         _exit(0)
 
-    @staticmethod
-    def do_clear(args):
-        system("cls")
-
     def do_begin(self, args):
         try:
             pid = DarkShell.get_window_pid(self.game.PROCESS_NAME)
             self.game.attach(pid)
+            self.game.prepare()
             print("Successfully attached to the DARK SOULS process")
             print("Game version: %s" % self.game.version)
             Thread(target=self.game.check_alive).start()
@@ -63,20 +79,31 @@ class DarkShell(DSCmp):
                     self.game.stats[stat] = self.game.get_stat(stat)
             rbn.join(), rit.join(), rin.join(), rco.join()
             if self.run_static:
-                self.execute_source(DarkSouls.STATIC_SOURCE)
+                Thread(target=self.execute_static_commands).start()
 
     @staticmethod
     def help_static():
-        print("\nUsage:\tstatic [command [args]]")
+        print("\nUsage:\t",
+              "static [command [args]]\n\t",
+              "static list\n\t",
+              "static clean\n\t",
+              "static remove [line-num]")
         print("\nOptions:")
         for opt in DS_STATIC.keys():
             print("\t%s" % opt)
+        print("\n")
 
     def do_static(self, args):
-        if args[0] not in DS_STATIC.keys():
-            print("Command '%s' can't be static!" % args[0])
-        else:
-            self.game.switch(command="static", arguments=args)
+        try:
+            if args[0] in DS_STATIC.keys():
+                self.game.switch(command="static", arguments=args)
+            else:
+                if args[0] not in DS_NEST.keys():
+                    print("Unrecognized command: %s" % args[0])
+                else:
+                    print("Command '%s' can't be static!" % args[0])
+        except FileNotFoundError:
+            pass
 
     def do_pos_gui(self, args):
         try:

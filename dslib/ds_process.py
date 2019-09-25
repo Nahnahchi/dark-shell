@@ -90,12 +90,23 @@ class DSProcess:
         self.version = None
         self.offsets = None
 
+    def can_read(self):
+        try:
+            dummy_pointer = self.interface.dummy_read_int(self.offsets.CHAR_DATA_POINTER_A1)
+            dummy_pointer = self.interface.dummy_read_int(dummy_pointer + self.offsets.CHAR_DATA_POINTER_A2)
+            dummy_pointer = self.interface.dummy_read_int(dummy_pointer + self.offsets.CHAR_DATA_POINTER_A3)
+            return dummy_pointer is not None
+        except TypeError:
+            return False
+
     def has_exited(self):
         return not pid_exists(self.id)
 
     def attach(self, pid):
         self.id = pid
         self.interface = DSInterface(pid)
+
+    def prepare(self):
         self.check_version()
         self.check_valid()
         self.load_pointers()

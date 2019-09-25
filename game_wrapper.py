@@ -15,10 +15,11 @@ import winsound
 class DarkSouls(DSProcess):
 
     PROCESS_NAME = "DARK SOULS"
-    STATIC_SOURCE = "static"
+    STATIC_SOURCE = "dsres/save/static"
 
     def __init__(self):
         super(DarkSouls, self).__init__()
+        open(DarkSouls.STATIC_SOURCE, "w")
         self.bonfires = defaultdict(DSBonfire)
         self.items = defaultdict(DSItem)
         self.infusions = defaultdict(DSInfusion)
@@ -94,11 +95,6 @@ class DarkSouls(DSProcess):
             title="Warning",
             text="This command will kill all NPCs in the area. Do you want to proceed?"
         ).run()
-
-    def prepare(self):
-        self.check_version()
-        self.check_valid()
-        self.load_pointers()
 
     def print_stats(self):
         print("\n\tHealth: %d/%d" % (self.get_hp(), self.get_hp_mod_max()))
@@ -540,8 +536,15 @@ class DarkSouls(DSProcess):
             @staticmethod
             def static_list():
                 lines = open(DarkSouls.STATIC_SOURCE, "r").readlines()
-                for line in lines:
-                    print("\t", line)
+                for i in range(len(lines)):
+                    print("\t%d %s" % (i, lines[i].strip()))
+
+            @staticmethod
+            def static_remove():
+                remove_ind = int(arguments[1])
+                lines = open(DarkSouls.STATIC_SOURCE, "r").readlines()
+                del lines[remove_ind]
+                open(DarkSouls.STATIC_SOURCE, "w").writelines(lines)
 
             @staticmethod
             def static_clean():

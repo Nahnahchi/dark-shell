@@ -888,6 +888,7 @@ DS_BOOL = {
 DS_STATIC = {
     "list": None,
     "clean": None,
+    "remove": None,
     "unlock-all-gestures": None,
     "set": {
         "vit": None,
@@ -930,14 +931,12 @@ DS_STATIC = {
 
 DS_NEST = {
     "static": DS_STATIC,
-    "help": None,
     "clear": None,
     "begin": None,
     "exit": None,
     "quit": None,
     "end": None,
     "game-restart": None,
-    "unlock-all-gestures": None,
     "menu-kick": None,
     "pos-gui": None,
     "graphics-gui": None,
@@ -1067,42 +1066,15 @@ DS_NEST = {
             "near-cell": None,
             "sunlight-altar": None
         }
-    },
-    "get": {
-        "stats": None,
-    },
-    "set": {
-        "vit": None,
-        "atn": None,
-        "end": None,
-        "str": None,
-        "dex": None,
-        "res": None,
-        "int": None,
-        "fth": None,
-        "sls": None,
-        "hum": None,
-        "speed-game": None,
-        "phantom-type": None,
-        "team-type": None,
-        "ng": None,
-        "name": None,
-        "covenant": {
-            "none": None,
-            "way-of-white": None,
-            "princess's-guard": None,
-            "warrior-of-sunlight": None,
-            "darkwraith": None,
-            "path-of-the-gragon": None,
-            "gravelord-servant": None,
-            "forest-hunter": None,
-            "darkmoon-blade": None,
-            "chaos-servant": None
-        }
-    },
-    "enable": DS_BOOL,
-    "disable": DS_BOOL,
-    "item-get": DS_ITEM,
-    "item-drop": DS_ITEM,
-    "item-get-upgrade": DS_ITEM
+    }
 }
+
+DS_NEST.update(dict(DS_STATIC))
+
+DS_HELP = {
+    "help": {
+        command: None for command in DS_NEST.keys()
+    }
+}
+
+DS_NEST.update(dict(DS_HELP))

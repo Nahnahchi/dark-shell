@@ -31,21 +31,24 @@ class DSCmp:
     def get_method_name(prefix: str, name: str):
         return prefix + name.replace("-", "_")
 
-    def set_completer(self, nest: dict):
+    def set_nested_completer(self, nest: dict):
         self.completer = NestedCompleter.from_nested_dict(nest)
     
     def cmp_loop(self):
         while True:
-            user_inp = prompt(
-                DSCmp.prompt_prefix,
-                completer=self.completer,
-                history=self.history,
-                enable_history_search=True
-            )
-            parser = DSParser(user_inp)
-            command = parser.get_command()
-            arguments = parser.get_arguments()
-            self.execute_command(command, arguments)
+            try:
+                user_inp = prompt(
+                    DSCmp.prompt_prefix,
+                    completer=self.completer,
+                    history=self.history,
+                    enable_history_search=True
+                )
+                parser = DSParser(user_inp)
+                command = parser.get_command()
+                arguments = parser.get_arguments()
+                self.execute_command(command, arguments)
+            except KeyboardInterrupt:
+                pass
 
     def execute_command(self, command, arguments):
         try:
@@ -84,8 +87,10 @@ class DSCmp:
                     if com_name != "default":
                         commands.append(DSCmp.get_method_name(prefix="", name=com_name))
             commands.sort()
+            print("\n")
             for command in commands:
                 print("\t%s" % command)
+            print("\n")
 
     def do_default(self, args):
         pass

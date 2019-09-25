@@ -55,10 +55,18 @@ class DSInterface:
     def read_byte(self, address):
         return self._read_byte(address)
 
+    def dummy_read_int(self, address):
+        data = c_long()
+        bytes_read = c_ulong(0)
+        if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+            return data.value
+        else:
+            return None
+
     def _read_int(self, address, signed: bool):
         data = c_ulong() if not signed else c_long()
         bytes_read = c_ulong(0)
-        if self.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
+        if DSInterface.read_process_memory(self.process.handle, address, byref(data), sizeof(data), byref(bytes_read)):
             return data.value
         else:
             print("Failed to read memory - error code: ", DSInterface.get_last_error())
