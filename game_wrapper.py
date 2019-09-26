@@ -19,7 +19,6 @@ class DarkSouls(DSProcess):
 
     def __init__(self):
         super(DarkSouls, self).__init__()
-        open(DarkSouls.STATIC_SOURCE, "w")
         self.bonfires = defaultdict(DSBonfire)
         self.items = defaultdict(DSItem)
         self.infusions = defaultdict(DSInfusion)

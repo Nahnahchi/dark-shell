@@ -1069,7 +1069,7 @@ DS_NEST = {
     }
 }
 
-DS_NEST.update(dict(DS_STATIC))
+DS_NEST.update(DS_STATIC.copy())
 
 DS_HELP = {
     "help": {
@@ -1077,4 +1077,4 @@ DS_HELP = {
     }
 }
 
-DS_NEST.update(dict(DS_HELP))
+DS_NEST.update(DS_HELP.copy())

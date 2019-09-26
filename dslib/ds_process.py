@@ -48,7 +48,7 @@ class DSProcess:
 
     CHECK_VERSION = 0x400080
 
-    DARKSOULS_VERSIONS = ({
+    GAME_VERSIONS = ({
         0xFC293654: "Steam",
         0xCE9634B4: "Debug",
         0xE91B11E2: "Beta"
@@ -92,10 +92,10 @@ class DSProcess:
 
     def can_read(self):
         try:
-            dummy_pointer = self.interface.dummy_read_int(self.offsets.CHAR_DATA_POINTER_A1)
-            dummy_pointer = self.interface.dummy_read_int(dummy_pointer + self.offsets.CHAR_DATA_POINTER_A2)
-            dummy_pointer = self.interface.dummy_read_int(dummy_pointer + self.offsets.CHAR_DATA_POINTER_A3)
-            return dummy_pointer is not None
+            test_pointer = self.interface.dummy_read_int(self.offsets.CHAR_DATA_POINTER_A1)
+            test_pointer = self.interface.dummy_read_int(test_pointer + self.offsets.CHAR_DATA_POINTER_A2)
+            test_pointer = self.interface.dummy_read_int(test_pointer + self.offsets.CHAR_DATA_POINTER_A3)
+            return test_pointer is not None
         except TypeError:
             return False
 
@@ -115,7 +115,7 @@ class DSProcess:
         try:
             version = self.interface.read_uint(DSProcess.CHECK_VERSION)
             if version is not None:
-                self.version = DSProcess.DARKSOULS_VERSIONS[version]
+                self.version = DSProcess.GAME_VERSIONS[version]
             else:
                 raise RuntimeError("Couldn't read game's version")
         except KeyError:
@@ -214,7 +214,7 @@ class DSProcess:
     def unlock_all_gestures(self):
         success = True
         for gesture in vars(self.offsets.Gestures).values():
-            if type(gesture) == int:
+            if isinstance(gesture, int):
                 success &= self.interface.write_flag(self.pointers[Data.GESTURES] + gesture, 1, True)
         return success
 

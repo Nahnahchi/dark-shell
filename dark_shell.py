@@ -75,10 +75,11 @@ class DarkShell(DSCmp):
             rco = Thread(target=self.game.read_covenants)
             rbn.start(), rit.start(), rin.start(), rco.start()
             for stat in vars(Stat).values():
-                if type(stat) == Stat:
+                if isinstance(stat, Stat):
                     self.game.stats[stat] = self.game.get_stat(stat)
             rbn.join(), rit.join(), rin.join(), rco.join()
             if self.run_static:
+                open(self.game.STATIC_SOURCE, "w")
                 Thread(target=self.execute_static_commands).start()
 
     @staticmethod
@@ -253,6 +254,14 @@ class DarkShell(DSCmp):
             else:
                 b_name = " ".join(args[0:])
                 self.game.bonfire_warp_by_name(b_name)
+        except Exception as e:
+            print("%s: %s\nCouldn't complete the command" % (type(e).__name__, e))
+
+    def do_unlock_all_gestures(self, args):
+        try:
+            self.game.prepare()
+            if self.game.unlock_all_gestures():
+                print("All gestures unlocked")
         except Exception as e:
             print("%s: %s\nCouldn't complete the command" % (type(e).__name__, e))
 

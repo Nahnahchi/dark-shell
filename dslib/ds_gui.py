@@ -194,7 +194,7 @@ class DSGraphicsGUI(Tk):
         if saved["override f"]:
             self.set_override_filter()
 
-    def save_all(self):
+    def save_state(self):
         DSGraphicsGUI.SAVED_DATA["override f"] = self.override_filter.get()
         DSGraphicsGUI.SAVED_DATA["sync br"] = self.sync_brightness.get()
         DSGraphicsGUI.SAVED_DATA["sync co"] = self.sync_contrast.get()
@@ -215,7 +215,7 @@ class DSGraphicsGUI(Tk):
             self.set_brightness_g(), self.set_contrast_g()
             self.set_brightness_b(), self.set_contrast_b()
             self.set_saturation(), self.set_hue()
-        self.save_all()
+        self.save_state()
 
     def set_brightness_r(self, *e):
         if self.sync_brightness.get():
@@ -226,7 +226,7 @@ class DSGraphicsGUI(Tk):
             float(self.brightness_g.get()),
             float(self.brightness_b.get())
         )
-        self.save_all()
+        self.save_state()
 
     def set_brightness_g(self, *e):
         if self.sync_brightness.get():
@@ -237,7 +237,7 @@ class DSGraphicsGUI(Tk):
             float(self.brightness_g.get()),
             float(self.brightness_b.get())
         )
-        self.save_all()
+        self.save_state()
 
     def set_brightness_b(self, *e):
         if self.sync_brightness.get():
@@ -248,7 +248,7 @@ class DSGraphicsGUI(Tk):
             float(self.brightness_g.get()),
             float(self.brightness_b.get())
         )
-        self.save_all()
+        self.save_state()
 
     def set_contrast_r(self, *e):
         if self.sync_contrast.get():
@@ -259,7 +259,7 @@ class DSGraphicsGUI(Tk):
             float(self.contrast_g.get()),
             float(self.contrast_b.get())
         )
-        self.save_all()
+        self.save_state()
 
     def set_contrast_g(self, *e):
         if self.sync_contrast.get():
@@ -270,7 +270,7 @@ class DSGraphicsGUI(Tk):
             float(self.contrast_g.get()),
             float(self.contrast_b.get())
         )
-        self.save_all()
+        self.save_state()
 
     def set_contrast_b(self, *e):
         if self.sync_contrast.get():
@@ -281,15 +281,15 @@ class DSGraphicsGUI(Tk):
             float(self.contrast_g.get()),
             float(self.contrast_b.get())
         )
-        self.save_all()
+        self.save_state()
 
     def set_saturation(self, *e):
         self.process.set_saturation(float(self.saturation.get()))
-        self.save_all()
+        self.save_state()
 
     def set_hue(self, *e):
         self.process.set_hue(float(self.hue.get()))
-        self.save_all()
+        self.save_state()
 
     def set_draw_map(self):
         self.process.draw_map(self.draw_map.get())
