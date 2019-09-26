@@ -79,7 +79,7 @@ class DarkShell(DSCmp):
                     self.game.stats[stat] = self.game.get_stat(stat)
             rbn.join(), rit.join(), rin.join(), rco.join()
             if self.run_static:
-                open(self.game.STATIC_SOURCE, "w")
+                open(self.game.STATIC_SOURCE, "a")
                 Thread(target=self.execute_static_commands).start()
 
     @staticmethod
