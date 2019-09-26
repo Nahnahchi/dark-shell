@@ -17,3 +17,9 @@ end
 Pass the script to the program as a parameter: `python dark_shell.py myscript.txt`.
 
 To manage event flags type `enable [flag-id]` or `disable [flag-id]`, to read flags: `get [flag-id]`.
+
+If you want a certain command to be executed every time the program or the game is reloaded, use the `static` command:
+```
+static enable no-dead
+static item-drop titanite-slab 3
+```
