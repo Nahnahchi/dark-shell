@@ -96,7 +96,7 @@ class DSProcess:
             test_pointer = self.interface.dummy_read_int(test_pointer + self.offsets.CHAR_DATA_POINTER_A2)
             test_pointer = self.interface.dummy_read_int(test_pointer + self.offsets.CHAR_DATA_POINTER_A3)
             return test_pointer is not None
-        except TypeError:
+        except (TypeError, AttributeError):
             return False
 
     def has_exited(self):

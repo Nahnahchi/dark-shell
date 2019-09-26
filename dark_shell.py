@@ -195,7 +195,7 @@ class DarkShell(DSCmp):
 
     @staticmethod
     def help_item_drop():
-        print("\nUsage:\titem-drop [item-name]\n")
+        print("\nUsage:\titem-drop [item-name [count]]\n")
 
     def do_item_drop(self, args):
         try:
@@ -208,7 +208,7 @@ class DarkShell(DSCmp):
 
     @staticmethod
     def help_item_get():
-        print("\nUsage:\titem-get [item-name]\n")
+        print("\nUsage:\titem-get [item-name [count]]\n")
 
     def do_item_get(self, args):
         try:
