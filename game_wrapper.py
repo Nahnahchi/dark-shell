@@ -40,7 +40,7 @@ class DarkSouls(DSProcess):
         i_name = args[0]
         i_count = 1
         try:
-            if len(args) >= 3:
+            if len(args) >= 2:
                 i_count = int(args[1])
         except ValueError:
             print("Wrong parameter type: %s" % args[1])
