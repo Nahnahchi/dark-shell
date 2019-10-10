@@ -169,7 +169,7 @@ class DarkShell(DSCmp):
 
     @staticmethod
     def help_get():
-        print("\nUsage:\tget [option]")
+        print("\nUsage:\tget [option/flag-id]")
         print("\nOptions:")
         for opt in DS_NEST["get"].keys():
             print("\t%s" % opt)

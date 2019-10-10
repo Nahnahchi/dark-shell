@@ -6,16 +6,23 @@ from os.path import join, isfile, dirname
 from inspect import getfile, currentframe
 from collections import defaultdict
 from time import sleep
-from os import listdir
+from os import listdir, makedirs, getenv
 from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog
 import ctypes
 import winsound
 
 
+save_dir = join(getenv("APPDATA"), "DarkShell", "save")
+try:
+    makedirs(save_dir)
+except FileExistsError:
+    pass
+
+
 class DarkSouls(DSProcess):
 
     PROCESS_NAME = "DARK SOULS"
-    STATIC_SOURCE = "dsres/save/static"
+    STATIC_SOURCE = join(save_dir, "static")
 
     def __init__(self):
         super(DarkSouls, self).__init__()
@@ -248,16 +255,13 @@ class DarkSouls(DSProcess):
             @staticmethod
             def static_default():
                 with open(DarkSouls.STATIC_SOURCE, "a") as static_source:
-                    line = ""
-                    for arg in arguments:
-                        line += arg + " "
-                    static_source.write(line + "\n")
+                    static_source.write(" ".join(arguments) + "\n")
 
             @staticmethod
             def set_speed_game():
                 speed = float(arguments[1])
                 if dark_souls.set_game_speed(speed):
-                    print("Game speed changed to %f" % speed)
+                    print("Game speed changed to %.2f" % speed)
 
             @staticmethod
             def set_phantom_type():

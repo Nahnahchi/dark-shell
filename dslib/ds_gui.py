@@ -3,11 +3,20 @@ from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Ch
 from threading import Thread
 from time import sleep
 from pickle import dump, load, UnpicklingError
+from os import makedirs, getenv
+from os.path import join
+
+
+save_dir = join(getenv("APPDATA"), "DarkShell", "save")
+try:
+    makedirs(save_dir)
+except FileExistsError:
+    pass
 
 
 class DSGraphicsGUI(Tk):
 
-    SAVE_FILE = "dsres/save/graphics"
+    SAVE_FILE = join(save_dir, "graphics")
     SAVED_DATA = {
         "override f": False,
         "sync br": True,

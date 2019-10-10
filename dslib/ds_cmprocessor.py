@@ -85,7 +85,7 @@ class DSCmp:
                 if name[:prefix_len] == DSCmp.com_prefix:
                     com_name = name[prefix_len:]
                     if com_name != "default":
-                        commands.append(DSCmp.get_method_name(prefix="", name=com_name))
+                        commands.append(com_name.replace("_", "-"))
             commands.sort()
             print("\n")
             for command in commands:

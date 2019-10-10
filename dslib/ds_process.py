@@ -443,7 +443,7 @@ class DSProcess:
 
     def set_saturation(self, saturation: float):
         return self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] +
-                                        self.offsets.GraphicsData.SATURATION, saturation)
+                                          self.offsets.GraphicsData.SATURATION, saturation)
 
     def set_hue(self, hue: float):
         return self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.HUE, hue)

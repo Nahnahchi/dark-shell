@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='dark-shell',
-    version='0.7',
+    version='1.0.1',
     packages=find_packages(),
     url='https://github.com/Nahnahchi/dark-shell',
-    license='GNU GENERAL PUBLIC LICENSE',
+    license='GPL-3.0',
     author='Nahnahchi',
     author_email='sawalozb@gmail.com',
     description='A command line tool for testing and debugging DARK SOULS - Prepare to Die Edition',
