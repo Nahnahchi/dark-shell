@@ -17,7 +17,7 @@ class DSParser:
         return self.arguments
 
 
-class DSCmp:
+class DSCmd:
     
     com_prefix = "do_"
     help_prefix = "help_"
@@ -34,11 +34,11 @@ class DSCmp:
     def set_nested_completer(self, nest: dict):
         self.completer = NestedCompleter.from_nested_dict(nest)
     
-    def cmp_loop(self):
+    def cmd_loop(self):
         while True:
             try:
                 user_inp = prompt(
-                    DSCmp.prompt_prefix,
+                    DSCmd.prompt_prefix,
                     completer=self.completer,
                     history=self.history,
                     enable_history_search=True
@@ -53,8 +53,8 @@ class DSCmp:
     def execute_command(self, command, arguments):
         try:
             getattr(self,
-                    DSCmp.get_method_name(
-                        prefix=DSCmp.com_prefix,
+                    DSCmd.get_method_name(
+                        prefix=DSCmd.com_prefix,
                         name=command if command.strip() else "default")
                     )(arguments)
         except AttributeError as e:
@@ -66,23 +66,24 @@ class DSCmp:
                 commands = open(source, "r").readlines()
                 for command in commands:
                     parser = DSParser(command)
-                    c = parser.get_command()
-                    a = parser.get_arguments()
-                    self.execute_command(c, a)
+                    self.execute_command(
+                        command=parser.get_command(),
+                        arguments=parser.get_arguments()
+                    )
             except (PermissionError, FileNotFoundError, EOFError) as e:
                 print("%s: %s" % (type(e).__name__, e))
 
     def do_help(self, args):
         if len(args) > 0:
             try:
-                getattr(self, DSCmp.get_method_name(prefix=DSCmp.help_prefix, name=args[0]))()
+                getattr(self, DSCmd.get_method_name(prefix=DSCmd.help_prefix, name=args[0]))()
             except AttributeError as e:
                 print("%s: %s" % (type(e).__name__, e))
         else:
             commands = []
             for name in dir(self.__class__):
-                prefix_len = len(DSCmp.com_prefix)
-                if name[:prefix_len] == DSCmp.com_prefix:
+                prefix_len = len(DSCmd.com_prefix)
+                if name[:prefix_len] == DSCmd.com_prefix:
                     com_name = name[prefix_len:]
                     if com_name != "default":
                         commands.append(com_name.replace("_", "-"))

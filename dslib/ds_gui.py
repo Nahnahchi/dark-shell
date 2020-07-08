@@ -141,21 +141,21 @@ class DSGraphicsGUI(Tk):
         self.brightness_r = StringVar()
         self.brightness_r.set(saved["brightness r"])
         box_br_r = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_r, width=15,
-                           command=self.set_brightness_r)
+                           command=self.set_brightness_r, increment=0.05)
         box_br_r.grid(row=2, column=0, sticky="W")
         box_br_r.bind("<Return>", self.set_brightness_r)
 
         self.brightness_g = StringVar()
         self.brightness_g.set(saved["brightness g"])
         box_br_g = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_g, width=15,
-                           command=self.set_brightness_g)
+                           command=self.set_brightness_g, increment=0.05)
         box_br_g.grid(row=2, column=1, sticky="W")
         box_br_g.bind("<Return>", self.set_brightness_g)
 
         self.brightness_b = StringVar()
         self.brightness_b.set(saved["brightness b"])
         box_br_b = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.brightness_b, width=15,
-                           command=self.set_brightness_b)
+                           command=self.set_brightness_b, increment=0.05)
         box_br_b.grid(row=2, column=2, sticky="W")
         box_br_b.bind("<Return>", self.set_brightness_b)
 
@@ -167,21 +167,21 @@ class DSGraphicsGUI(Tk):
         self.contrast_r = StringVar()
         self.contrast_r.set(saved["contrast r"])
         box_co_r = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_r, width=15,
-                           command=self.set_contrast_r)
+                           command=self.set_contrast_r, increment=0.05)
         box_co_r.grid(row=4, column=0, sticky="W")
         box_co_r.bind("<Return>", self.set_contrast_r)
 
         self.contrast_g = StringVar()
         self.contrast_g.set(saved["contrast g"])
         box_co_g = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_g, width=15,
-                           command=self.set_contrast_g)
+                           command=self.set_contrast_g, increment=0.05)
         box_co_g.grid(row=4, column=1, sticky="W")
         box_co_g.bind("<Return>", self.set_contrast_g)
 
         self.contrast_b = StringVar()
         self.contrast_b.set(saved["contrast b"])
         box_co_b = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.contrast_b, width=15,
-                           command=self.set_contrast_b)
+                           command=self.set_contrast_b, increment=0.05)
         box_co_b.grid(row=4, column=2, sticky="W")
         box_co_b.bind("<Return>", self.set_contrast_b)
 
@@ -190,13 +190,13 @@ class DSGraphicsGUI(Tk):
         self.saturation = StringVar()
         self.saturation.set(saved["saturation"])
         box_sat = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.saturation, width=15,
-                          command=self.set_saturation)
+                          command=self.set_saturation, increment=0.05)
         box_sat.grid(row=6, column=0, sticky="W")
         box_sat.bind("<Return>", self.set_saturation)
         self.hue = StringVar()
         self.hue.set(saved["hue"])
         box_hue = Spinbox(filter_, from_=-1000, to=1000, format="%.3f", textvariable=self.hue, width=15,
-                          command=self.set_hue)
+                          command=self.set_hue, increment=0.05)
         box_hue.grid(row=6, column=2, sticky="W")
         box_hue.bind("<Return>", self.set_hue)
 
@@ -373,7 +373,7 @@ class DSPositionGUI(Tk):
         Entry(self, width=10, state="readonly", textvariable=self.x_stable).grid(column=3, row=3)
         self.x_stored = StringVar()
         self.x_stored.set(process.get_pos_stable()[0])
-        Spinbox(self, from_=-1000, to=1000, format="%.3f", width=10, textvariable=self.x_stored).grid(column=4, row=3)
+        Spinbox(self, from_=-9999, to=9999, format="%.3f", width=10, textvariable=self.x_stored).grid(column=4, row=3)
 
         self.y_current = StringVar()
         Entry(self, width=10, state="readonly", textvariable=self.y_current).grid(column=2, row=4)
@@ -381,7 +381,7 @@ class DSPositionGUI(Tk):
         Entry(self, width=10, state="readonly", textvariable=self.y_stable).grid(column=3, row=4)
         self.y_stored = StringVar()
         self.y_stored.set(process.get_pos_stable()[1])
-        Spinbox(self, from_=-1000, to=1000, format="%.3f", width=10, textvariable=self.y_stored).grid(column=4, row=4)
+        Spinbox(self, from_=-9999, to=9999, format="%.3f", width=10, textvariable=self.y_stored).grid(column=4, row=4)
 
         self.z_current = StringVar()
         Entry(self, width=10, state="readonly", textvariable=self.z_current).grid(column=2, row=5)
@@ -389,7 +389,7 @@ class DSPositionGUI(Tk):
         Entry(self, width=10, state="readonly", textvariable=self.z_stable).grid(column=3, row=5)
         self.z_stored = StringVar()
         self.z_stored.set(process.get_pos_stable()[2])
-        Spinbox(self, from_=-1000, to=1000, format="%.3f", width=10, textvariable=self.z_stored).grid(column=4, row=5)
+        Spinbox(self, from_=-9999, to=9999, format="%.3f", width=10, textvariable=self.z_stored).grid(column=4, row=5)
 
         self.a_current = StringVar()
         Entry(self, width=10, state="readonly", textvariable=self.a_current).grid(column=2, row=6)
@@ -429,7 +429,7 @@ class DSPositionGUI(Tk):
             self.a_stable.set("%.3f" % self.process.get_pos_stable()[3])
             self.world.set(self.process.get_world())
             self.area.set(self.process.get_area())
-            sleep(0.2)
+            sleep(0.1)
 
     def freeze(self):
         self.process.lock_pos(self.lock_pos.get())

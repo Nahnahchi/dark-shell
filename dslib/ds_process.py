@@ -1,32 +1,19 @@
-from enum import Enum, auto
+from enum import Enum
 from collections import defaultdict
-from dslib.ds_interface import DSInterface
-from dsres.ds_offsets import DSPointersRelease, DSPointersDebug
+from dsres.ds_offsets import DSOffsets, Index
 from dsres.ds_asm import Scripts
 from ctypes import ArgumentError
 from math import pi
-from psutil import pid_exists
+# noinspection PyUnresolvedReferences
+from dsprh.ds_imports import DSHook, PHEventArgs, Kernel32, FasmNet
+# noinspection PyUnresolvedReferences
+from System import IntPtr, Int32
+# noinspection PyUnresolvedReferences
+from System.Text import Encoding
 
 
-class Data(Enum):
-
-    CHAR_DATA_A = auto()
-    ANIM_DATA = auto()
-    CHAR_POS_DATA = auto()
-    CHAR_MAP_DATA = auto()
-    CHAR_DATA_B = auto()
-    CHAR_DATA_C = auto()
-    GRAPHICS_DATA = auto()
-    WORLD_STATE = auto()
-    MENU_MANAGER = auto()
-    CHR_FOLLOW_CAM = auto()
-    EVENT_FLAGS = auto()
-    UNKNOWN_A = auto()
-    UNKNOWN_B = auto()
-    UNKNOWN_C = auto()
-    UNKNOWN_D = auto()
-    GESTURES = auto()
-    GAME_MAN = auto()
+def ptr(offset: int):
+    return IntPtr.op_Explicit(Int32(offset))
 
 
 class Stat(Enum):
@@ -46,12 +33,10 @@ class Stat(Enum):
 
 class DSProcess:
 
-    CHECK_VERSION = 0x400080
-
     GAME_VERSIONS = ({
         0xFC293654: "Steam",
         0xCE9634B4: "Debug",
-        0xE91B11E2: "Beta"
+        0xE91B11E2: "Steamworks Beta"
     })
 
     EVENT_FLAG_GROUPS = {
@@ -83,96 +68,110 @@ class DSProcess:
         "181": 17
     }
 
-    def __init__(self):
-        self.pointers = defaultdict(int)
-        self.id = 0
-        self.interface = None
+    def __init__(self, process_name):
+        self.hook = DSHook(self, 5000, 5000, process_name)
         self.version = None
-        self.offsets = None
+        self.pointers = defaultdict()
+        self.is_hooked = lambda: self.hook.Hooked
+        self.is_loaded = lambda: self.pointers[Index.CHR_FOLLOW_CAM].Resolve() != IntPtr.Zero
+        self.hook.Start()
+        self.scan_aob()
 
-    def can_read(self):
+    def get_version(self):
+        return self.version
+
+    def set_version(self, version):
+        self.version = version
+
+    def check_version(self, sender: object, *e: PHEventArgs):
         try:
-            test_pointer = self.interface.dummy_read_int(self.offsets.CHAR_DATA_POINTER_A1)
-            test_pointer = self.interface.dummy_read_int(test_pointer + self.offsets.CHAR_DATA_POINTER_A2)
-            test_pointer = self.interface.dummy_read_int(test_pointer + self.offsets.CHAR_DATA_POINTER_A3)
-            return test_pointer is not None
-        except (TypeError, AttributeError):
-            return False
-
-    def has_exited(self):
-        return not pid_exists(self.id)
-
-    def attach(self, pid):
-        self.id = pid
-        self.interface = DSInterface(pid)
-
-    def prepare(self):
-        self.check_version()
-        self.check_valid()
-        self.load_pointers()
-
-    def check_version(self):
-        try:
-            version = self.interface.read_uint(DSProcess.CHECK_VERSION)
-            if version is not None:
-                self.version = DSProcess.GAME_VERSIONS[version]
-            else:
-                raise RuntimeError("Couldn't read game's version")
+            version = self.pointers[Index.CHECK_VERSION].ReadUInt32(0)
+            self.set_version(DSProcess.GAME_VERSIONS[version] if version is not None else None)
         except KeyError:
-            self.version = "Unknown"
+            self.set_version("Unknown")
+        finally:
+            try:
+                getattr(self, "update_version")()
+            except AttributeError:
+                pass
 
-    def check_valid(self):
-        valid = True if self.version in ("Steam", "Debug") else False
-        if not valid:
-            raise RuntimeError("Your DARK SOULS version is not supported")
-        else:
-            self.offsets = DSPointersRelease if self.version == "Steam" else DSPointersDebug
+    def scan_aob(self):
 
-    def load_pointers(self):
+        p = self.pointers
+        h = self.hook
+        i = Index
+        o = DSOffsets
 
-        pointers = self.pointers
-        offsets = self.offsets
-        read_mem = self.interface.read_int
+        p[i.CHECK_VERSION] = h.CreateBasePointer(ptr(o.CHECK_VERSION))
 
-        pointer1 = read_mem(offsets.CHAR_DATA_POINTER_A1)
-        pointer1 = read_mem(pointer1 + offsets.CHAR_DATA_POINTER_A2)
-        pointers[Data.CHAR_DATA_A] = read_mem(pointer1 + offsets.CHAR_DATA_POINTER_A3)
-        pointers[Data.CHAR_MAP_DATA] = read_mem(pointers[Data.CHAR_DATA_A] + offsets.CharDataA.CHAR_MAP_DATA_POINTER)
-        pointers[Data.ANIM_DATA] = read_mem(pointers[Data.CHAR_MAP_DATA] + offsets.CharMapData.ANIM_DATA_POINTER)
-        pointers[Data.CHAR_POS_DATA] = read_mem(pointers[Data.CHAR_MAP_DATA] +
-                                                offsets.CharMapData.CHAR_POS_DATA_POINTER)
+        p[i.POS_LOCK] = h.RegisterAbsoluteAOB(o.POS_LOCK_AOB)
+        p[i.NODE_GRAPH] = h.RegisterAbsoluteAOB(o.NODE_GRAPH_AOB)
+        p[i.ALL_NO_MAGIC_QTY_CONSUME] = h.RegisterAbsoluteAOB(o.ALL_NO_MAGIC_QTY_CONSUME_AOB,
+                                                              o.ALL_NO_MAGIC_QTY_CONSUME_AOB_OFFSET)
+        p[i.PLAYER_NO_DEAD] = h.RegisterAbsoluteAOB(o.PLAYER_NO_DEAD_AOB,
+                                                    o.PLAYER_NO_DEAD_AOB_OFFSET)
+        p[i.PLAYER_EXTERMINATE] = h.RegisterAbsoluteAOB(o.PLAYER_EXTERMINATE_AOB,
+                                                        o.PLAYER_EXTERMINATE_AOB_OFFSET)
+        p[i.ALL_NO_STAMINA_CONSUME] = h.RegisterAbsoluteAOB(o.ALL_NO_STAMINA_CONSUME_AOB,
+                                                            o.ALL_NO_STAMINA_CONSUME_AOB_OFFSET)
+        p[i.COMPASS] = h.RegisterAbsoluteAOB(o.COMPASS_AOB)
+        p[i.COMPASS_SMALL] = h.CreateChildPointer(p[i.COMPASS], o.COMPASS_SMALL_AOB_OFFSET)
+        p[i.COMPASS_LARGE] = h.CreateChildPointer(p[i.COMPASS], o.COMPASS_LARGE_AOB_OFFSET)
+        p[i.ALTIMETER] = h.CreateChildPointer(p[i.COMPASS], o.ALTIMETER_AOB_OFFSET)
+        p[i.DRAW_MAP] = h.RegisterAbsoluteAOB(o.DRAW_MAP_AOB, o.DRAW_MAP_AOB_OFFSET)
 
-        pointer1 = read_mem(offsets.CHAR_DATA_POINTER_B1)
-        pointers[Data.CHAR_DATA_B] = read_mem(pointer1 + offsets.CHAR_DATA_POINTER_B2)
+        p[i.CHAR_DATA_A] = h.RegisterAbsoluteAOB(o.CHAR_DATA_A_AOB, o.CHAR_DATA_AOB_OFFSET_A,
+                                                 o.CHAR_DATA_OFFSET_A1, o.CHAR_DATA_OFFSET_A2,
+                                                 o.CHAR_DATA_OFFSET_A3)
+        p[i.CHAR_MAP_DATA] = h.CreateChildPointer(p[i.CHAR_DATA_A], o.CharDataA.CHAR_MAP_DATA_POINTER)
+        p[i.ANIM_DATA] = h.CreateChildPointer(p[i.CHAR_MAP_DATA], o.CharMapData.ANIM_DATA_POINTER)
+        p[i.CHAR_POS_DATA] = h.CreateChildPointer(p[i.CHAR_MAP_DATA], o.CharMapData.CHAR_POS_DATA_POINTER)
+        p[i.CHAR_DATA_B] = h.RegisterAbsoluteAOB(o.CHAR_DATA_B_AOB, o.CHAR_DATA_AOB_OFFSET_B,
+                                                 o.CHAR_DATA_OFFSET_B1, o.CHAR_DATA_OFFSET_B2)
+        p[i.GESTURES] = h.CreateChildPointer(p[i.CHAR_DATA_B], o.CharDataB.GESTURES_UNLOCKED_POINTER)
+        p[i.GRAPHICS_DATA] = h.RegisterAbsoluteAOB(o.GRAPHICS_DATA_AOB, o.GRAPHICS_DATA_AOB_OFFSET,
+                                                   o.GRAPHICS_DATA_OFFSET_1, o.GRAPHICS_DATA_OFFSET_2)
+        p[i.WORLD_STATE] = h.RegisterAbsoluteAOB(o.WORLD_STATE_AOB, o.WORLD_STATE_AOB_OFFSET, o.WORLD_STATE_OFFSET)
+        p[i.MENU_MANAGER] = h.RegisterAbsoluteAOB(o.MENU_MANGER_AOB, o.MENU_MANGER_AOB_OFFSET, o.MENU_MANGER_OFFSET)
+        p[i.CHR_FOLLOW_CAM] = h.RegisterAbsoluteAOB(o.CHR_FOLLOW_CAM_AOB, o.CHR_FOLLOW_CAM_AOB_OFFSET,
+                                                    o.CHR_FOLLOW_CAM_OFFSET_1, o.CHR_FOLLOW_CAM_OFFSET_2,
+                                                    o.CHR_FOLLOW_CAM_OFFSET_3)
+        p[i.EVENT_FLAGS] = h.RegisterAbsoluteAOB(o.EVENT_FLAGS_AOB, o.EVENT_FLAGS_AOB_OFFSET, o.EVENT_FLAGS_OFFSET_1,
+                                                 o.EVENT_FLAGS_OFFSET_2)
+        p[i.UNKNOWN_A] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_A, o.UNKNOWN_AOB_OFFSET_A, o.UNKNOWN_OFFSET_A)
+        p[i.UNKNOWN_B] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_B, o.UNKNOWN_AOB_OFFSET_B, o.UNKNOWN_OFFSET_B)
+        p[i.UNKNOWN_C] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_C, o.UNKNOWN_AOB_OFFSET_C, o.UNKNOWN_OFFSET_C)
+        p[i.UNKNOWN_D] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_D, o.UNKNOWN_AOB_OFFSET_D, o.UNKNOWN_OFFSET_D1,
+                                               o.UNKNOWN_OFFSET_D2)
 
-        pointers[Data.CHAR_DATA_C] = read_mem(offsets.CHAR_DATA_POINTER_B1)
+        p[i.FUNC_ITEM_GET] = h.RegisterAbsoluteAOB(o.FUNC_ITEM_GET_AOB)
+        p[i.FUNC_LEVEL_UP] = h.RegisterAbsoluteAOB(o.FUNC_LEVEL_UP_AOB)
+        p[i.FUNC_BONFIRE_WARP] = h.RegisterAbsoluteAOB(o.FUNC_BONFIRE_WARP_AOB)
+        p[i.FUNC_BONFIRE_WARP_UNKNOWN] = h.RegisterAbsoluteAOB(o.FUNC_BONFIRE_WARP_UNKNOWN_AOB,
+                                                               o.FUNC_BONFIRE_WARP_UNKNOWN_OFFSET)
+        p[i.FUNC_ITEM_DROP] = h.RegisterAbsoluteAOB(o.FUNC_ITEM_DROP_AOB)
+        p[i.FUNC_ITEM_DROP_UNKNOWN_A] = h.RegisterAbsoluteAOB(o.FUNC_ITEM_DROP_UNKNOWN_AOB_A,
+                                                              o.FUNC_ITEM_DROP_UNKNOWN_AOB_OFFSET_A)
 
-        pointer1 = read_mem(offsets.GRAPHICS_DATA_POINTER_1)
-        pointers[Data.GRAPHICS_DATA] = read_mem(pointer1 + offsets.GRAPHICS_DATA_POINTER_2)
+        p[i.FUNC_ITEM_DROP_UNKNOWN_B] = h.RegisterAbsoluteAOB(o.FUNC_ITEM_DROP_UNKNOWN_AOB_B,
+                                                              o.FUNC_ITEM_DROP_UNKNOWN_AOB_OFFSET_B)
 
-        pointers[Data.WORLD_STATE] = read_mem(offsets.WORLD_STATE_POINTER)
+        # p[i.GAME_MAN] = h.RegisterRelativeAOB(o.GAME_MAN_AOB, 8, 12)
 
-        pointers[Data.MENU_MANAGER] = read_mem(offsets.MENU_MANGER_POINTER)
+        h.OnHooked += self.check_version
+        h.OnUnhooked += lambda sender, *e: self.set_version(None)
 
-        pointer1 = read_mem(offsets.CHR_FOLLOW_CAM_POINTER_1)
-        pointer1 = read_mem(pointer1 + offsets.CHR_FOLLOW_CAM_POINTER_2)
-        pointers[Data.CHR_FOLLOW_CAM] = read_mem(pointer1 + offsets.CHR_FOLLOW_CAM_POINTER_3)
+    def execute_asm(self, asm: str):
+        byte_array = FasmNet.Assemble("use32\norg 0x0\n" + asm)
+        insert_ptr = self.hook.Allocate(len(byte_array))
+        byte_array = FasmNet.Assemble("use32\norg " + hex(insert_ptr.ToInt32()) + "\n" + asm)
+        Kernel32.WriteBytes(self.hook.Handle, insert_ptr, byte_array)
+        result = self.hook.Execute(insert_ptr)
+        self.hook.Free(insert_ptr)
+        return result == 0
 
-        pointer1 = read_mem(offsets.EVENT_FLAGS_POINTER_1)
-        pointers[Data.EVENT_FLAGS] = read_mem(pointer1 + offsets.EVENT_FLAGS_POINTER_2)
-
-        pointers[Data.UNKNOWN_A] = read_mem(offsets.UNKNOWN_POINTER_A)
-        pointers[Data.UNKNOWN_B] = read_mem(offsets.UNKNOWN_POINTER_B)
-        pointers[Data.UNKNOWN_C] = read_mem(offsets.UNKNOWN_POINTER_C)
-        pointer1 = read_mem(offsets.UNKNOWN_POINTER_D1)
-        pointers[Data.UNKNOWN_D] = read_mem(pointer1 + offsets.UNKNOWN_POINTER_D2)
-
-        pointers[Data.GESTURES] = read_mem(pointers[Data.CHAR_DATA_B] +
-                                           offsets.CharDataB.GESTURES_UNLOCKED_POINTER)
-
-        pointers[Data.GAME_MAN] = read_mem(offsets.GAME_MAN_POINTER)
-
-    def get_event_flag_addr(self, flag_id):
+    @staticmethod
+    def get_event_flag_offset(flag_id):
         id_str = str(flag_id).zfill(8)
         if len(id_str) != 8:
             raise ArgumentError("Unknown event flag ID: %d" % flag_id)
@@ -187,359 +186,358 @@ class DSProcess:
                 offset += section * 128
                 offset += int((number - (number % 32)) / 8)
                 mask = 0x80000000 >> (number % 32)
-                return self.pointers[Data.EVENT_FLAGS] + offset, mask
+                return offset, mask
 
     def read_event_flag(self, flag_id):
-        address, mask = self.get_event_flag_addr(flag_id)
-        return self.interface.read_flag(address, mask)
+        address, mask = self.get_event_flag_offset(flag_id)
+        print(address, mask)
+        return self.pointers[Index.EVENT_FLAGS].ReadFlag32(address, mask)
 
     def write_event_flag(self, flag_id, value: bool):
-        address, mask = self.get_event_flag_addr(flag_id)
-        return self.interface.write_flag(address, mask, value)
+        address, mask = self.get_event_flag_offset(flag_id)
+        print(address, mask)
+        return self.pointers[Index.EVENT_FLAGS].WriteFlag32(address, mask, value)
 
     def set_game_speed(self, speed: float):
-        return self.interface.write_float(self.pointers[Data.ANIM_DATA] + self.offsets.AnimData.PLAY_SPEED, speed)
+        return self.pointers[Index.ANIM_DATA].WriteSingle(DSOffsets.AnimData.PLAY_SPEED, speed)
 
     def death_cam(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.UNKNOWN_B] + self.offsets.UnknownB.DEATH_CAM, enable)
+        return self.pointers[Index.UNKNOWN_B].WriteBoolean(DSOffsets.UnknownB.DEATH_CAM, enable)
 
     def game_restart(self):
-        return self.interface.write_flag(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_flag(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.B_REQUEST_TO_ENDING, 1, True)
 
     def disable_fps_disconnect(self):
-        return self.interface.write_int(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_int(self.pointers[Index.GAME_MAN] +
                                         self.offsets.GameMan.IS_FPS_DISCONNECTION, 0)
 
     def unlock_all_gestures(self):
         success = True
-        for gesture in vars(self.offsets.Gestures).values():
+        for gesture in vars(DSOffsets.Gestures).values():
             if isinstance(gesture, int):
-                success &= self.interface.write_flag(self.pointers[Data.GESTURES] + gesture, 1, True)
+                success &= self.pointers[Index.GESTURES].WriteFlag32(gesture, 1, True)
         return success
 
     def menu_kick(self):
-        return self.interface.write_int(self.pointers[Data.UNKNOWN_C] + self.offsets.UnknownC.MENU_KICK, 2)
+        return self.pointers[Index.UNKNOWN_C].WriteFlag32(DSOffsets.UnknownC.MENU_KICK, 2)
 
     def set_phantom_type(self, value: int):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.PHANTOM_TYPE, value)
+        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PHANTOM_TYPE, value)
+
+    def get_phantom_type(self):
+        return self.pointers[Index.CHAR_DATA_A].ReaadInt32(DSOffsets.CharDataA.PHANTOM_TYPE)
 
     def set_team_type(self, value: int):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.TEAM_TYPE, value)
+        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.TEAM_TYPE, value)
+
+    def get_team_type(self):
+        return self.pointers[Index.CHAR_DATA_A].ReadInt32(DSOffsets.CharDataA.TEAM_TYPE)
+
+    def get_play_region(self):
+        return self.pointers[Index.CHAR_DATA_A].ReadInt32(DSOffsets.CharDataA.PLAY_REGION)
+
+    def set_play_region(self, value: int):
+        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PLAY_REGION, value)
+
+    def get_world(self):
+        return self.pointers[Index.UNKNOWN_A].ReadByte(DSOffsets.UnknownA.WORLD)
+
+    def get_area(self):
+        return self.pointers[Index.UNKNOWN_A].ReadByte(DSOffsets.UnknownA.AREA)
 
     def set_super_armor(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
-                                         self.offsets.CharFlagsA.SET_SUPER_ARMOR, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_SUPER_ARMOR, int(enable))
 
     def set_draw_enable(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
-                                         self.offsets.CharFlagsA.SET_DRAW_ENABLE, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DRAW_ENABLE, int(enable))
 
     def set_no_gravity(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
-                                         self.offsets.CharFlagsA.SET_DISABLE_GRAVITY, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DISABLE_GRAVITY, int(enable))
+
+    def set_no_collision(self, enable: bool):
+        return self.pointers[Index.CHAR_MAP_DATA].WriteFlag32(DSOffsets.CharMapData.CHAR_MAP_FLAGS,
+                                                              DSOffsets.CharMapFlags.DISABLE_MAP_HIT, int(enable))
 
     def set_no_dead(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_DEAD, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_DEAD, int(enable))
 
     def set_no_move(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_MOVE, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_MOVE, int(enable))
 
     def set_no_stamina_consume(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_STAMINA_CONSUME, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_STAMINA_CONSUME, int(enable))
 
     def set_no_goods_consume(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_GOODS_CONSUME, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_GOODS_CONSUME, int(enable))
 
     def set_no_update(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_UPDATE, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_UPDATE, int(enable))
 
     def set_no_attack(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_ATTACK, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_ATTACK, int(enable))
 
     def set_no_damage(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_DAMAGE, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_DAMAGE, int(enable))
 
     def set_no_hit(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_2,
-                                         self.offsets.CharFlagsB.NO_HIT, int(enable))
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_HIT, int(enable))
 
     def get_player_dead_mode(self):
-        return self.interface.read_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
-                                        self.offsets.CharFlagsA.SET_DEAD_MODE)
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DEAD_MODE)
 
     def set_player_dead_mode(self, enable: bool):
-        return self.interface.write_flag(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.CHAR_FLAGS_1,
-                                         self.offsets.CharFlagsA.SET_DEAD_MODE, enable)
+        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DEAD_MODE, enable)
 
     def set_no_magic_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_MAGIC_QTY_CONSUME, enable)
+        return self.pointers[Index.ALL_NO_MAGIC_QTY_CONSUME].WriteBoolean(0, enable)
 
     def set_no_stamina_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_STAMINA_CONSUME, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(0, enable)
 
     def set_exterminate(self, enable: bool):
-        return self.interface.write_bool(self.offsets.PLAYER_EXTERMINATE, enable)
+        return self.pointers[Index.PLAYER_EXTERMINATE].WriteBoolean(0, enable)
 
     def set_no_ammo_consume_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_ARROW_CONSUME, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_ARROW_CONSUME, enable)
 
     def set_hide(self, enable: bool):
-        return self.interface.write_bool(self.offsets.PLAYER_HIDE, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.PLAYER_HIDE, enable)
 
     def set_silence(self, enable: bool):
-        return self.interface.write_bool(self.offsets.PLAYER_SILENCE, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.PLAYER_SILENCE, enable)
 
     def set_no_dead_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_DEAD, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_DEAD, enable)
 
     def set_no_damage_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_DAMAGE, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_DAMAGE, enable)
 
     def set_no_hit_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_HIT, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_HIT, enable)
 
     def set_no_attack_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_ATTACK, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_ATTACK, enable)
 
     def set_no_move_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_MOVE, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_MOVE, enable)
 
     def set_no_update_ai_all(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALL_NO_UPDATE_AI, enable)
+        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_UPDATE_AI, enable)
 
     def disable_all_area_enemies(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, disable)
 
     def disable_all_area_event(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, disable)
 
     def disable_all_area_map(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_MAP, disable)
 
     def disable_all_area_obj(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, disable)
 
     def enable_all_area_obj(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, enable)
 
     def enable_all_area_obj_break(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, enable)
 
     def disable_all_area_hi_hit(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, disable)
 
     def disable_all_area_lo_hit(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, disable)
 
     def disable_all_area_sfx(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_SFX, disable)
 
     def disable_all_area_sound(self, disable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, disable)
 
     def enable_obj_break_record_mode(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, enable)
 
     def enable_auto_map_warp_mode(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_AUTO_MAP_WARP_MODE, enable)
 
     def enable_chr_npc_wander_test(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_CHR_NPC_WANDER_TEST, enable)
 
     def enable_dbg_chr_all_dead(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_DBG_CHR_ALL_DEAD, enable)
 
     def enable_online_mode(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GAME_MAN] +
+        raise NotImplementedError("GAME MAN options not yet available")
+        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
                                          self.offsets.GameMan.IS_ONLINE_MODE, enable)
 
     def draw_bounding(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.DRAW_BOUNDING_BOXES, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_BOUNDING_BOXES, enable)
 
     def draw_sprite_masks(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.DRAW_DEPTH_TEX_EDGE, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_DEPTH_TEX_EDGE, enable)
 
     def draw_textures(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.DRAW_TEXTURES, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_TEXTURES, enable)
 
     def draw_sprites(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.NORMAL_DRAW_TEX_EDGE, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.NORMAL_DRAW_TEX_EDGE, enable)
 
     def draw_trans(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.NORMAL_TRANS, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.NORMAL_TRANS, enable)
 
     def draw_shadows(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.DRAW_SHADOWS, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_SHADOWS, enable)
 
     def draw_sprite_shadows(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.DRAW_SPRITE_SHADOWS, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_SPRITE_SHADOWS, enable)
 
     def draw_map(self, enable: bool):
-        return self.interface.write_bool(self.offsets.DRAW_MAP, enable)
+        return self.pointers[Index.DRAW_MAP].WriteBoolean(DSOffsets.DrawMap.DRAW_MAP, enable)
 
     def draw_creatures(self, enable: bool):
-        return self.interface.write_bool(self.offsets.DRAW_CREATURES, enable)
+        return self.pointers[Index.DRAW_MAP].WriteBoolean(DSOffsets.DrawMap.DRAW_CREATURES, enable)
 
     def draw_objects(self, enable: bool):
-        return self.interface.write_bool(self.offsets.DRAW_OBJECTS, enable)
+        return self.pointers[Index.DRAW_MAP].WriteBoolean(DSOffsets.DrawMap.DRAW_OBJECTS, enable)
 
     def draw_sfx(self, enable: bool):
-        return self.interface.write_bool(self.offsets.DRAW_SFX, enable)
+        return self.pointers[Index.DRAW_MAP].WriteBoolean(DSOffsets.DrawMap.DRAW_SFX, enable)
 
     def draw_compass_large(self, enable: bool):
-        return self.interface.write_bool(self.offsets.COMPASS_LARGE, enable)
+        return self.pointers[Index.COMPASS_LARGE].WriteBoolean(0, enable)
 
     def draw_compass_small(self, enable: bool):
-        return self.interface.write_bool(self.offsets.COMPASS_SMALL, enable)
+        return self.pointers[Index.COMPASS_SMALL].WriteBoolean(0, enable)
 
     def draw_altimeter(self, enable: bool):
-        return self.interface.write_bool(self.offsets.ALTIMETER, enable)
+        return self.pointers[Index.ALTIMETER].WriteBoolean(0, enable)
 
     def draw_nodes(self, enable: bool):
-        return self.interface.write_bool(self.offsets.NODE_GRAPH, enable)
+        return self.pointers[Index.NODE_GRAPH].WriteBoolean(DSOffsets.NODE_GRAPH_AOB_OFFSET, enable)
 
     def override_filter(self, enable: bool):
-        return self.interface.write_bool(self.pointers[Data.GRAPHICS_DATA] +
-                                         self.offsets.GraphicsData.ENABLE_FILTER, enable)
+        return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.ENABLE_FILTER, enable)
 
     def set_brightness(self, red: float, green: float, blue: float):
-        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_R, red)
-        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_G, green)
-        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.BRIGHTNESS_B, blue)
+        self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.BRIGHTNESS_R, red)
+        self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.BRIGHTNESS_G, green)
+        self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.BRIGHTNESS_B, blue)
 
     def set_contrast(self, red: float, green: float, blue: float):
-        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_R, red)
-        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_G, green)
-        self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.CONTRAST_B, blue)
+        self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.CONTRAST_R, red)
+        self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.CONTRAST_G, green)
+        self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.CONTRAST_B, blue)
 
     def set_saturation(self, saturation: float):
-        return self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] +
-                                          self.offsets.GraphicsData.SATURATION, saturation)
+        return self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.SATURATION, saturation)
 
     def set_hue(self, hue: float):
-        return self.interface.write_float(self.pointers[Data.GRAPHICS_DATA] + self.offsets.GraphicsData.HUE, hue)
+        return self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.HUE, hue)
 
     def get_class(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.CLASS)
+        return self.pointers[Index.CHAR_DATA_B].ReadByte(DSOffsets.CharDataB.CLASS)
 
-    def set_class(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.CLASS, value)
+    def set_class(self, value: int):
+        return self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.CLASS, value)
 
     def get_soul_level(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.SOUL_LEVEL)
-
-    def set_soul_level(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.SOUL_LEVEL, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.SOUL_LEVEL)
 
     def get_souls(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.SOULS)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.SOULS)
 
-    def set_souls(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.SOULS, value)
+    def set_souls(self, value: int):
+        return self.pointers[Index.CHAR_DATA_B].WriteInt32(DSOffsets.CharDataB.SOULS, value)
 
     def get_humanity(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HUMANITY)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HUMANITY)
 
-    def set_humanity(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HUMANITY, value)
+    def set_humanity(self, value: int):
+        return self.pointers[Index.CHAR_DATA_B].WriteInt32(DSOffsets.CharDataB.HUMANITY, value)
 
     def get_hp(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HP)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HP)
 
-    def set_hp(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_A] + self.offsets.CharDataA.HP, value)
+    def set_hp(self, value: int):
+        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.HP, value)
 
     def get_hp_max(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HP_MAX)
-
-    def set_hp_max(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HP_MAX, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HP_MAX)
 
     def get_hp_mod_max(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HP_MOD_MAX)
-
-    def set_hp_mod_max(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.HP_MOD_MAX, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HP_MOD_MAX)
 
     def get_stamina(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.STAMINA_MOD_MAX)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.STAMINA_MOD_MAX)
 
     def get_vitality(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.VITALITY)
-
-    def set_vitality(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.VITALITY, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.VITALITY)
 
     def get_attunement(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.ATTUNEMENT)
-
-    def set_attunement(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.ATTUNEMENT, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.ATTUNEMENT)
 
     def get_endurance(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.ENDURANCE)
-
-    def set_endurance(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.ENDURANCE, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.ENDURANCE)
 
     def get_strength(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.STRENGTH)
-
-    def set_strength(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.STRENGTH, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.STRENGTH)
 
     def get_dexterity(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.DEXTERITY)
-
-    def set_dexterity(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.DEXTERITY, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.DEXTERITY)
 
     def get_resistance(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.RESISTANCE)
-
-    def set_resistance(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.RESISTANCE, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.RESISTANCE)
 
     def get_intelligence(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.INTELLIGENCE)
-
-    def set_intelligence(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.INTELLIGENCE, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.INTELLIGENCE)
 
     def get_faith(self):
-        return self.interface.read_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.FAITH)
-
-    def set_faith(self, value):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.FAITH, value)
+        return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.FAITH)
 
     def get_stat(self, stat: Stat):
         if stat == Stat.VIT:
@@ -567,115 +565,137 @@ class DSProcess:
 
     def level_up(self, new_stats: dict):
 
-        stats = self.interface.allocate(2048)
+        stats = self.hook.Allocate(2048).ToInt32()
+        handle = self.hook.Handle
         humanity = self.get_humanity()
-        set_stat = self.interface.write_int
-        level = self.offsets.FuncLevelUp
+        write_stat = Kernel32.WriteInt32
+        level = DSOffsets.FuncLevelUp
 
-        set_stat(stats + level.VIT, new_stats[Stat.VIT])
-        set_stat(stats + level.ATN, new_stats[Stat.ATN])
-        set_stat(stats + level.END, new_stats[Stat.END])
-        set_stat(stats + level.STR, new_stats[Stat.STR])
-        set_stat(stats + level.DEX, new_stats[Stat.DEX])
-        set_stat(stats + level.RES, new_stats[Stat.RES])
-        set_stat(stats + level.INT, new_stats[Stat.INT])
-        set_stat(stats + level.FTH, new_stats[Stat.FTH])
-        set_stat(stats + level.SLV, new_stats[Stat.SLV])
-        set_stat(stats + level.SLS, new_stats[Stat.SLS])
+        write_stat(handle, ptr(stats + level.VIT), new_stats[Stat.VIT])
+        write_stat(handle, ptr(stats + level.ATN), new_stats[Stat.ATN])
+        write_stat(handle, ptr(stats + level.END), new_stats[Stat.END])
+        write_stat(handle, ptr(stats + level.STR), new_stats[Stat.STR])
+        write_stat(handle, ptr(stats + level.DEX), new_stats[Stat.DEX])
+        write_stat(handle, ptr(stats + level.RES), new_stats[Stat.RES])
+        write_stat(handle, ptr(stats + level.INT), new_stats[Stat.INT])
+        write_stat(handle, ptr(stats + level.FTH), new_stats[Stat.FTH])
+        write_stat(handle, ptr(stats + level.SLV), new_stats[Stat.SLV])
+        write_stat(handle, ptr(stats + level.SLS), new_stats[Stat.SLS])
 
         self.set_no_dead(True)
-        success = \
-            self.interface.execute_asm(
-                Scripts.LEVEL_UP % (stats, stats, self.offsets.FUNC_LEVEL_UP_POINTER)
+        result = \
+            self.execute_asm(
+                Scripts.LEVEL_UP % (stats, stats, self.pointers[Index.FUNC_LEVEL_UP].Resolve().ToInt32())
             )
         self.set_no_dead(False)
 
-        self.interface.free(stats)
+        self.hook.Free(ptr(stats))
 
         self.set_humanity(humanity)
 
-        return success
+        return result
 
     def get_pos(self):
         return (
-            self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_X),
-            self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_Y),
-            self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_Z),
-            (self.interface.read_float(self.pointers[Data.CHAR_POS_DATA] + self.offsets.CharPosData.POS_ANGLE)
-             + pi) / (pi * 2) * 360
+            self.pointers[Index.CHAR_POS_DATA].ReadSingle(DSOffsets.CharPosData.POS_X),
+            self.pointers[Index.CHAR_POS_DATA].ReadSingle(DSOffsets.CharPosData.POS_Y),
+            self.pointers[Index.CHAR_POS_DATA].ReadSingle(DSOffsets.CharPosData.POS_Z),
+            (self.pointers[Index.CHAR_POS_DATA].ReadSingle(DSOffsets.CharPosData.POS_ANGLE) + pi) / (pi * 2) * 360
         )
 
     def get_pos_stable(self):
         return (
-            self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_X),
-            self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_Y),
-            self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_Z),
-            (self.interface.read_float(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.POS_STABLE_ANGLE)
-             + pi) / (pi * 2) * 360
+            self.pointers[Index.WORLD_STATE].ReadSingle(DSOffsets.WorldState.POS_STABLE_X),
+            self.pointers[Index.WORLD_STATE].ReadSingle(DSOffsets.WorldState.POS_STABLE_Y),
+            self.pointers[Index.WORLD_STATE].ReadSingle(DSOffsets.WorldState.POS_STABLE_Z),
+            (self.pointers[Index.WORLD_STATE].ReadSingle(DSOffsets.WorldState.POS_STABLE_ANGLE) + pi) / (pi * 2) * 360
         )
 
-    def jump_pos(self, x, y, z, a):
-        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_X, x)
-        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_Y, y)
-        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_Z, z)
-        self.interface.write_float(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP_ANGLE,
-                                   a / 360 * 2 * pi - pi)
-        self.interface.write_int(self.pointers[Data.CHAR_MAP_DATA] + self.offsets.CharMapData.WARP, 1)
+    def jump_pos(self, x: float, y: float, z: float, a: float):
+        self.pointers[Index.CHAR_MAP_DATA].WriteSingle(DSOffsets.CharMapData.WARP_X, x)
+        self.pointers[Index.CHAR_MAP_DATA].WriteSingle(DSOffsets.CharMapData.WARP_Y, y)
+        self.pointers[Index.CHAR_MAP_DATA].WriteSingle(DSOffsets.CharMapData.WARP_Z, z)
+        self.pointers[Index.CHAR_MAP_DATA].WriteSingle(DSOffsets.CharMapData.WARP_ANGLE, a / 360 * 2 * pi - pi)
+        self.pointers[Index.CHAR_MAP_DATA].WriteBoolean(DSOffsets.CharMapData.WARP, True)
 
     def lock_pos(self, lock: bool):
         if lock:
-            self.interface.write_bytes(self.offsets.POS_LOCK_1, bytes([0x90, 0x90, 0x90, 0x90, 0x90]))
-            self.interface.write_bytes(self.offsets.POS_LOCK_2, bytes([0x90, 0x90, 0x90, 0x90, 0x90]))
+            self.pointers[Index.POS_LOCK].WriteBytes(DSOffsets.POS_LOCK_AOB_OFFSET_1,
+                                                     bytes([0x90, 0x90, 0x90, 0x90, 0x90]))
+            self.pointers[Index.POS_LOCK].WriteBytes(DSOffsets.POS_LOCK_AOB_OFFSET_2,
+                                                     bytes([0x90, 0x90, 0x90, 0x90, 0x90]))
         else:
-            self.interface.write_bytes(self.offsets.POS_LOCK_1, bytes([0x66, 0x0F, 0xD6, 0x46, 0x10]))
-            self.interface.write_bytes(self.offsets.POS_LOCK_2, bytes([0x66, 0x0F, 0xD6, 0x46, 0x18]))
+            self.pointers[Index.POS_LOCK].WriteBytes(DSOffsets.POS_LOCK_AOB_OFFSET_1,
+                                                     bytes([0x66, 0x0F, 0xD6, 0x46, 0x10]))
+            self.pointers[Index.POS_LOCK].WriteBytes(DSOffsets.POS_LOCK_AOB_OFFSET_2,
+                                                     bytes([0x66, 0x0F, 0xD6, 0x46, 0x18]))
 
-    def get_world(self):
-        return self.interface.read_byte(self.pointers[Data.UNKNOWN_A] + self.offsets.UnknownA.WORLD)
+    def dump_follow_cam(self):
+        return self.pointers[Index.CHR_FOLLOW_CAM].ReadBytes(0, 512)
 
-    def get_area(self):
-        return self.interface.read_byte(self.pointers[Data.UNKNOWN_A] + self.offsets.UnknownA.AREA)
+    def undump_follow_cam(self, byte_arr: bytes):
+        return self.pointers[Index.CHR_FOLLOW_CAM].WriteBytes(0, byte_arr)
 
     def get_bonfire(self):
-        return self.interface.read_int(self.pointers[Data.WORLD_STATE] + self.offsets.WorldState.LAST_BONFIRE)
+        return self.pointers[Index.WORLD_STATE].ReadInt32(DSOffsets.WorldState.LAST_BONFIRE)
 
     def set_bonfire(self, bonfire_id: int):
-        return self.interface.write_int(self.pointers[Data.WORLD_STATE] +
-                                        self.offsets.WorldState.LAST_BONFIRE, bonfire_id)
+        return self.pointers[Index.WORLD_STATE].WriteInt32(DSOffsets.WorldState.LAST_BONFIRE, bonfire_id)
+
+    def get_name(self):
+        return self.pointers[Index.CHAR_DATA_B].ReadString(DSOffsets.CharDataB.CHAR_NAME, Encoding.Unicode, 0x22)
 
     def set_name(self, name: str):
-        return self.interface.write_str(self.pointers[Data.CHAR_DATA_B] +
-                                        self.offsets.CharDataB.CHAR_NAME, name, length=128)
+        return self.pointers[Index.CHAR_DATA_B].WriteString(DSOffsets.CharDataB.CHAR_NAME,
+                                                            Encoding.Unicode, 0x22, name)
+
+    def get_sex(self):
+        return self.pointers[Index.CHAR_DATA_B].ReadInt16(DSOffsets.CharDataB.GENDER)
+
+    def set_sex(self, value: int):
+        return self.pointers[Index.CHAR_DATA_B].WriteInt16(DSOffsets.CharDataB.GENDER, value)
+
+    def get_physique(self):
+        return self.pointers[Index.CHAR_DATA_B].ReadByte(DSOffsets.CharDataB.PHYSIQUE)
+
+    def set_physique(self, value: int):
+        return self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.PHYSIQUE, value)
 
     def set_covenant(self, value: int):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.COVENANT, value)
+        return self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.COVENANT, value)
+
+    def get_covenant(self):
+        return self.pointers[Index.CHAR_DATA_B].ReadByte(DSOffsets.CharDataB.COVENANT)
 
     def set_ng_mode(self, value: int):
-        return self.interface.write_int(self.pointers[Data.CHAR_DATA_C] + self.offsets.CharDataC.NEW_GAME_MODE, value)
+        return self.pointers[Index.CHAR_DATA_C].WriteInt32(DSOffsets.CharDataC.NEW_GAME_MODE, value)
 
     def item_drop(self, category, item_id, count):
         return \
-            self.interface.execute_asm(
+            self.execute_asm(
                 Scripts.ITEM_DROP % (
                     category, item_id, count,
-                    self.offsets.FUNC_ITEM_DROP_UNKNOWN_1,
-                    self.offsets.FUNC_ITEM_DROP_UNKNOWN_2,
-                    self.offsets.FUNC_ITEM_DROP_POINTER)
+                    self.pointers[Index.FUNC_ITEM_DROP_UNKNOWN_A].Resolve().ToInt32(),
+                    self.pointers[Index.FUNC_ITEM_DROP_UNKNOWN_B].Resolve().ToInt32(),
+                    self.pointers[Index.FUNC_ITEM_DROP].Resolve().ToInt32()
+                )
             )
 
     def item_get(self, category, item_id, count):
         return \
-            self.interface.execute_asm(
+            self.execute_asm(
                 Scripts.ITEM_GET % (
-                    self.pointers[Data.CHAR_DATA_B] + self.offsets.CharDataB.INVENTORY_INDEX_START,
+                    self.pointers[Index.CHAR_DATA_B].Resolve().ToInt32() + DSOffsets.CharDataB.INVENTORY_INDEX_START,
                     category, item_id, count,
-                    self.offsets.FUNC_ITEM_GET_POINTER)
+                    self.pointers[Index.FUNC_ITEM_GET].Resolve().ToInt32()
+                )
             )
 
     def bonfire_warp(self):
         return \
-            self.interface.execute_asm(
+            self.execute_asm(
                 Scripts.BONFIRE_WARP % (
-                    self.offsets.FUNC_BONFIRE_WARP_UNKNOWN,
-                    self.offsets.FUNC_BONFIRE_WARP_POINTER)
+                    self.pointers[Index.FUNC_BONFIRE_WARP_UNKNOWN].Resolve().ToInt32(),
+                    self.pointers[Index.FUNC_BONFIRE_WARP].Resolve().ToInt32()
+                )
             )

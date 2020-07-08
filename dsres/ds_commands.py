@@ -1,4 +1,8 @@
 DS_ITEM = {
+    "weapon": None,
+    "armor": None,
+    "good": None,
+    "ring": None,
     "catarina-helm": None,
     "catarina-armor": None,
     "catarina-gauntlets": None,
@@ -932,7 +936,6 @@ DS_STATIC = {
 DS_NEST = {
     "static": DS_STATIC,
     "clear": None,
-    "begin": None,
     "exit": None,
     "quit": None,
     "end": None,

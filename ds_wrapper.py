@@ -1,20 +1,18 @@
 from dsobj.ds_bonfire import DSBonfire
 from dsobj.ds_item import DSItem, DSInfusion, Upgrade, infuse
 from dslib.ds_process import DSProcess, Stat
-from dslib.ds_cmprocessor import DSCmp
+from dslib.ds_cmd import DSCmd
 from os.path import join, isfile, dirname
 from inspect import getfile, currentframe
 from collections import defaultdict
-from time import sleep
 from os import listdir, makedirs, getenv
-from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog
-import ctypes
-import winsound
+from threading import Thread
+from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog, set_title
 
 
-save_dir = join(getenv("APPDATA"), "DarkShell", "save")
+SAVE_DIR = join(getenv("APPDATA"), "DarkShell", "save")
 try:
-    makedirs(save_dir)
+    makedirs(SAVE_DIR)
 except FileExistsError:
     pass
 
@@ -22,25 +20,28 @@ except FileExistsError:
 class DarkSouls(DSProcess):
 
     PROCESS_NAME = "DARK SOULS"
-    STATIC_SOURCE = join(save_dir, "static")
+    STATIC_SOURCE = join(SAVE_DIR, "static")
+    ITEM_CATEGORIES = {
+        "weapon": 0x00000000,
+        "good": 0x40000000,
+        "ring": 0x20000000,
+        "armor": 0x10000000
+    }
 
     def __init__(self):
-        super(DarkSouls, self).__init__()
+        super(DarkSouls, self).__init__(DarkSouls.PROCESS_NAME)
         self.bonfires = defaultdict(DSBonfire)
         self.items = defaultdict(DSItem)
         self.infusions = defaultdict(DSInfusion)
         self.covenants = defaultdict(int)
-        self.stats = defaultdict(int)
+        self.stats = {stat: 0 for stat in vars(Stat).values() if isinstance(stat, Stat)}
+        Thread(target=self.read_bonfires).start()
+        Thread(target=self.read_items).start()
+        Thread(target=self.read_infusions).start()
+        Thread(target=self.read_covenants).start()
 
-    def check_alive(self):
-        while True:
-            if self.has_exited():
-                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                ctypes.windll.user32.MessageBoxW(0, "DARK SOULS process is no longer running!",
-                                                 "DARKSOULS.exe has exited", 0)
-                self.interface = None
-                return
-            sleep(10)
+    def update_version(self):
+        set_title("Dark Shell - Game Version: %s" % self.get_version())
 
     @staticmethod
     def get_item_name_and_count(args: list):
@@ -129,7 +130,6 @@ class DarkSouls(DSProcess):
             for stat in self.stats.keys():
                 if stat.value != s_name:
                     if stat != Stat.SLV:
-
                         self.stats[stat] = self.get_stat(stat)
                 else:
                     new_stat = s_level
@@ -151,6 +151,13 @@ class DarkSouls(DSProcess):
                 print("Created new item, ID: %d" % i_id)
             else:
                 print("Failed to create item")
+
+    @staticmethod
+    def create_custom_item(i_cat, i_id, i_count, func=None):
+        if func(i_cat, i_id, i_count):
+            print("Created new item, ID: %s" % i_id)
+        else:
+            print("Failed to create item")
 
     def upgrade_item(self, i_name: str, i_count: int):
         if i_name not in self.items.keys():
@@ -228,7 +235,7 @@ class DarkSouls(DSProcess):
 
             @classmethod
             def switch(cls):
-                case_name = DSCmp.get_method_name(prefix=command+"_", name=arguments[0])
+                case_name = DSCmd.get_method_name(prefix=command + "_", name=arguments[0])
                 default = getattr(cls, command + "_default")
                 case_method = getattr(cls, case_name, default)
                 case_method()
