@@ -1,5 +1,4 @@
 from enum import Enum
-from collections import defaultdict
 from dsres.ds_offsets import DSOffsets, Index
 from dsres.ds_asm import Scripts
 from ctypes import ArgumentError
@@ -71,7 +70,7 @@ class DSProcess:
     def __init__(self, process_name):
         self.hook = DSHook(self, 5000, 5000, process_name)
         self.version = None
-        self.pointers = defaultdict()
+        self.pointers = {}
         self.is_hooked = lambda: self.hook.Hooked
         self.is_loaded = lambda: self.pointers[Index.CHR_FOLLOW_CAM].Resolve() != IntPtr.Zero
         self.hook.Start()
@@ -83,7 +82,7 @@ class DSProcess:
     def set_version(self, version):
         self.version = version
 
-    def check_version(self, sender, *e):
+    def check_version(self):
         try:
             version = self.pointers[Index.CHECK_VERSION].ReadUInt32(0)
             self.set_version(DSProcess.GAME_VERSIONS[version] if version is not None else None)
@@ -158,8 +157,8 @@ class DSProcess:
 
         p[i.GAME_MAN] = h.RegisterAbsoluteAOB(o.GAME_MAN_AOB, DSOffsets.GAME_MAN_AOB_OFFSET)
 
-        h.OnHooked += self.check_version
-        h.OnHooked += self.disable_fps_disconnect
+        h.OnHooked += lambda sender, *e: self.check_version()
+        h.OnHooked += lambda sender, *e: self.disable_fps_disconnect()
         h.OnUnhooked += lambda sender, *e: self.set_version(None)
 
     def execute_asm(self, asm: str):
@@ -217,7 +216,7 @@ class DSProcess:
         return result
 
     def menu_kick(self):
-        return self.pointers[Index.UNKNOWN_C].WriteFlag32(DSOffsets.UnknownC.MENU_KICK, 2)
+        return self.pointers[Index.UNKNOWN_C].WriteInt32(DSOffsets.UnknownC.MENU_KICK, 2)
 
     def set_phantom_type(self, value: int):
         return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PHANTOM_TYPE, value)
@@ -531,21 +530,21 @@ class DSProcess:
     def level_up(self, new_stats: dict):
 
         stats = self.hook.Allocate(2048).ToInt32()
-        handle = self.hook.Handle
         humanity = self.get_humanity()
-        write_stat = Kernel32.WriteInt32
         level = DSOffsets.FuncLevelUp
 
-        write_stat(handle, ptr(stats + level.VIT), new_stats[Stat.VIT])
-        write_stat(handle, ptr(stats + level.ATN), new_stats[Stat.ATN])
-        write_stat(handle, ptr(stats + level.END), new_stats[Stat.END])
-        write_stat(handle, ptr(stats + level.STR), new_stats[Stat.STR])
-        write_stat(handle, ptr(stats + level.DEX), new_stats[Stat.DEX])
-        write_stat(handle, ptr(stats + level.RES), new_stats[Stat.RES])
-        write_stat(handle, ptr(stats + level.INT), new_stats[Stat.INT])
-        write_stat(handle, ptr(stats + level.FTH), new_stats[Stat.FTH])
-        write_stat(handle, ptr(stats + level.SLV), new_stats[Stat.SLV])
-        write_stat(handle, ptr(stats + level.SLS), new_stats[Stat.SLS])
+        def write(offs, stat): Kernel32.WriteInt32(self.hook.Handle, ptr(stats + offs), stat)
+
+        write(level.VIT, new_stats[Stat.VIT])
+        write(level.ATN, new_stats[Stat.ATN])
+        write(level.END, new_stats[Stat.END])
+        write(level.STR, new_stats[Stat.STR])
+        write(level.DEX, new_stats[Stat.DEX])
+        write(level.RES, new_stats[Stat.RES])
+        write(level.INT, new_stats[Stat.INT])
+        write(level.FTH, new_stats[Stat.FTH])
+        write(level.SLV, new_stats[Stat.SLV])
+        write(level.SLS, new_stats[Stat.SLS])
 
         self.set_no_dead(True)
         result = \
