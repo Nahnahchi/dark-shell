@@ -3,9 +3,9 @@ from dsobj.ds_item import DSItem, DSInfusion, Upgrade, infuse
 from dslib.ds_process import DSProcess, Stat
 from dslib.ds_cmd import DSCmd
 from os.path import join, isfile, dirname
+from os import listdir, makedirs, getenv
 from inspect import getfile, currentframe
 from collections import defaultdict
-from os import listdir, makedirs, getenv
 from threading import Thread
 from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog, set_title
 
@@ -45,7 +45,7 @@ class DarkSouls(DSProcess):
 
     @staticmethod
     def get_item_name_and_count(args: list):
-        i_name = args[0]
+        i_name = args[0].lower()
         i_count = 1
         try:
             if len(args) >= 2:

@@ -377,7 +377,8 @@ class DSOffsets:
     FUNC_ITEM_DROP_UNKNOWN_AOB_B = "D9 E8 8B 1D ? ? ? ? 83 EC 08 D9 54 24 04 D9 1C 24 8D 44 24 20 6A 03 8B D3"
     FUNC_ITEM_DROP_UNKNOWN_AOB_OFFSET_B = 4
 
-    GAME_MAN_AOB = "90 ? ? 05 C0 ? ? 05 60 ? ? 05 80 ? ? 0D"
+    GAME_MAN_AOB = "60 ? ? 05 80 ? ? 0D 00 00 00 00 ? ? ? 05"
+    GAME_MAN_AOB_OFFSET = 0
 
     class GameMan:
         IS_DISABLE_ALL_AREA_ENEMIES = 0xC2C

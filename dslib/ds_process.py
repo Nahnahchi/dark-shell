@@ -5,7 +5,7 @@ from dsres.ds_asm import Scripts
 from ctypes import ArgumentError
 from math import pi
 # noinspection PyUnresolvedReferences
-from dsprh.ds_imports import DSHook, PHEventArgs, Kernel32, FasmNet
+from dsprh.ds_imports import DSHook, Kernel32, FasmNet
 # noinspection PyUnresolvedReferences
 from System import IntPtr, Int32
 # noinspection PyUnresolvedReferences
@@ -83,7 +83,7 @@ class DSProcess:
     def set_version(self, version):
         self.version = version
 
-    def check_version(self, sender: object, *e: PHEventArgs):
+    def check_version(self, sender, *e):
         try:
             version = self.pointers[Index.CHECK_VERSION].ReadUInt32(0)
             self.set_version(DSProcess.GAME_VERSIONS[version] if version is not None else None)
@@ -156,9 +156,10 @@ class DSProcess:
         p[i.FUNC_ITEM_DROP_UNKNOWN_B] = h.RegisterAbsoluteAOB(o.FUNC_ITEM_DROP_UNKNOWN_AOB_B,
                                                               o.FUNC_ITEM_DROP_UNKNOWN_AOB_OFFSET_B)
 
-        # p[i.GAME_MAN] = h.RegisterRelativeAOB(o.GAME_MAN_AOB, 8, 12)
+        p[i.GAME_MAN] = h.RegisterAbsoluteAOB(o.GAME_MAN_AOB, DSOffsets.GAME_MAN_AOB_OFFSET)
 
         h.OnHooked += self.check_version
+        h.OnHooked += self.disable_fps_disconnect
         h.OnUnhooked += lambda sender, *e: self.set_version(None)
 
     def execute_asm(self, asm: str):
@@ -190,12 +191,10 @@ class DSProcess:
 
     def read_event_flag(self, flag_id):
         address, mask = self.get_event_flag_offset(flag_id)
-        print(address, mask)
         return self.pointers[Index.EVENT_FLAGS].ReadFlag32(address, mask)
 
     def write_event_flag(self, flag_id, value: bool):
         address, mask = self.get_event_flag_offset(flag_id)
-        print(address, mask)
         return self.pointers[Index.EVENT_FLAGS].WriteFlag32(address, mask, value)
 
     def set_game_speed(self, speed: float):
@@ -205,21 +204,17 @@ class DSProcess:
         return self.pointers[Index.UNKNOWN_B].WriteBoolean(DSOffsets.UnknownB.DEATH_CAM, enable)
 
     def game_restart(self):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_flag(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.B_REQUEST_TO_ENDING, 1, True)
+        return self.pointers[Index.GAME_MAN].WriteFlag32(DSOffsets.GameMan.B_REQUEST_TO_ENDING, 1, True)
 
     def disable_fps_disconnect(self):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_int(self.pointers[Index.GAME_MAN] +
-                                        self.offsets.GameMan.IS_FPS_DISCONNECTION, 0)
+        return self.pointers[Index.GAME_MAN].WriteInt32(DSOffsets.GameMan.IS_FPS_DISCONNECTION, 0)
 
     def unlock_all_gestures(self):
-        success = True
+        result = True
         for gesture in vars(DSOffsets.Gestures).values():
             if isinstance(gesture, int):
-                success &= self.pointers[Index.GESTURES].WriteFlag32(gesture, 1, True)
-        return success
+                result &= self.pointers[Index.GESTURES].WriteFlag32(gesture, 1, True)
+        return result
 
     def menu_kick(self):
         return self.pointers[Index.UNKNOWN_C].WriteFlag32(DSOffsets.UnknownC.MENU_KICK, 2)
@@ -341,79 +336,49 @@ class DSProcess:
         return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_UPDATE_AI, enable)
 
     def disable_all_area_enemies(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, disable)
+        return self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, disable)
 
     def disable_all_area_event(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, disable)
 
     def disable_all_area_map(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_MAP, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_MAP, disable)
 
     def disable_all_area_obj(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, disable)
 
     def enable_all_area_obj(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, enable)
 
     def enable_all_area_obj_break(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, enable)
 
     def disable_all_area_hi_hit(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, disable)
 
     def disable_all_area_lo_hit(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, disable)
 
     def disable_all_area_sfx(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_SFX, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_SFX, disable)
 
     def disable_all_area_sound(self, disable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, disable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, disable)
 
     def enable_obj_break_record_mode(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, enable)
 
     def enable_auto_map_warp_mode(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_AUTO_MAP_WARP_MODE, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_AUTO_MAP_WARP_MODE, enable)
 
     def enable_chr_npc_wander_test(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_CHR_NPC_WANDER_TEST, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_CHR_NPC_WANDER_TEST, enable)
 
     def enable_dbg_chr_all_dead(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_DBG_CHR_ALL_DEAD, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DBG_CHR_ALL_DEAD, enable)
 
     def enable_online_mode(self, enable: bool):
-        raise NotImplementedError("GAME MAN options not yet available")
-        return self.interface.write_bool(self.pointers[Index.GAME_MAN] +
-                                         self.offsets.GameMan.IS_ONLINE_MODE, enable)
+        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ONLINE_MODE, enable)
 
     def draw_bounding(self, enable: bool):
         return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_BOUNDING_BOXES, enable)

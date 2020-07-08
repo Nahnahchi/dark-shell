@@ -8,6 +8,6 @@ clr.AddReference("Fasm.NET")
 # noinspection PyUnresolvedReferences
 from DarkShellHook import DSHook
 # noinspection PyUnresolvedReferences
-from PropertyHookCustom import PHEventArgs, Kernel32
+from PropertyHookCustom import Kernel32
 # noinspection PyUnresolvedReferences
 from Binarysharp.Assemblers.Fasm import FasmNet
