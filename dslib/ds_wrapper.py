@@ -2,20 +2,13 @@ from dsobj.ds_bonfire import DSBonfire
 from dsobj.ds_item import DSItem, DSInfusion, Upgrade, infuse
 from dslib.ds_process import DSProcess, Stats
 from dslib.ds_cmd import DSCmd
-from dsres.ds_resources import write_custom_item, remove_custom_item, clear_custom_items, read_custom_items
+from dsres.ds_resources import SAVE_DIR
 from dsres.ds_commands import nest_reset, nest_remove, nest_add
 from os.path import join
-from os import makedirs, getenv
 from collections import defaultdict
 from threading import Thread
 from ctypes import ArgumentError
 from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog, set_title
-
-SAVE_DIR = join(getenv("APPDATA"), "DarkShell", "save")
-try:
-    makedirs(SAVE_DIR)
-except FileExistsError:
-    pass
 
 
 class DarkSouls(DSProcess):
@@ -45,26 +38,36 @@ class DarkSouls(DSProcess):
         set_title("Dark Shell - Game Version: %s" % self.get_version())
 
     @staticmethod
+    def get_name_from_arg(arg: str):
+        return arg.replace("-", " ").title()
+
+    @staticmethod
     def add_new_item(args):
         if len(args) == 0:
-            raise ArgumentError("No arguments given")
+            raise ArgumentError("No arguments given!")
         else:
             if args[0] == "clear":
-                clear_custom_items(DarkSouls.ITEM_CATEGORIES)
+                from dsres.ds_resources import clear_mod_items
+                clear_mod_items(DarkSouls.ITEM_CATEGORIES)
                 nest_reset()
             elif args[0] == "remove":
+                from dsres.ds_resources import remove_mod_item
                 try:
-                    remove_custom_item(args[1])
+                    remove_mod_item(args[1])
                     nest_remove(args[1])
                 except IndexError:
-                    raise ArgumentError("Item name not specified")
+                    raise ArgumentError("Item name not specified!")
             elif args[0] == "list":
+                from dsres.ds_resources import read_mod_items
                 print("\n\tID\t\tName")
-                for item in read_custom_items():
+                for item in read_mod_items():
                     item = item.split()
-                    print("\t%s\t\t%s" % (item[0], " ".join(item[3].split("-")).title()))
+                    if len(item) == 4:
+                        print("\t%s\t\t%s" % (item[0], DarkSouls.get_name_from_arg(item[3])))
                 print("\n")
             elif args[0] == "add":
+                from dsres.ds_resources import create_mod_files
+                create_mod_files(DarkSouls.ITEM_CATEGORIES)
                 category = radiolist_dialog(
                     title="Select item category",
                     text="Category of the new item:",
@@ -84,35 +87,38 @@ class DarkSouls(DSProcess):
                 ).run()
                 if item_name is None:
                     return False
+                from dsres.ds_resources import write_mod_item
                 formatted_name = "-".join(item_name.lower().split())
                 try:
-                    if write_custom_item(category, formatted_name, int(item_id)):
+                    if write_mod_item(category, formatted_name, int(item_id)):
                         print("%s '%s' (ID: %s) added successfully" % (category.title(), item_name.title(), item_id))
                         nest_add([formatted_name])
                         return True
                     return False
                 except ValueError:
-                    raise ArgumentError("Can't convert %s '%s' to int" % (type(item_id).__name__, item_id))
+                    raise ArgumentError("Can't convert %s '%s' to int!" % (type(item_id).__name__, item_id))
             else:
                 raise ArgumentError("Unknown argument: %s" % args[0])
             return True
 
     @staticmethod
     def get_item_name_and_count(args: list):
+        if len(args) == 0:
+            raise ArgumentError("No item name specified!")
         i_name = args[0].lower()
         i_count = 1
         try:
             if len(args) >= 2:
                 i_count = int(args[1])
         except ValueError:
-            raise ArgumentError("Can't convert %s '%s' to int" % (type(args[1]).__name__, args[1]))
+            raise ArgumentError("Can't convert %s '%s' to int!" % (type(args[1]).__name__, args[1]))
         return i_name, i_count
 
     @staticmethod
     def get_upgrade_value_infusable(infusions: list, item: DSItem):
         infusion = radiolist_dialog(
             title="Select infusion type",
-            text="How would you like %s to be upgraded?" % item.get_name().upper().replace("-", " "),
+            text="How would you like %s to be upgraded?" % DarkSouls.get_name_from_arg(item.get_name()),
             values=infusions
         ).run()
         if infusion is None:
@@ -121,6 +127,10 @@ class DarkSouls(DSProcess):
             title="Enter upgrade value",
             text="Item type: Normal [%s]" % infusion.upper()
         ).run()
+        try:
+            int(upgrade)
+        except ValueError:
+            raise ArgumentError("Can't convert %s '%s' to int" % (type(upgrade).__name__, upgrade))
         return upgrade, infusion
 
     @staticmethod
@@ -128,12 +138,15 @@ class DarkSouls(DSProcess):
         is_pyro_asc = item.get_upgrade_type() == Upgrade.PYRO_FLAME_ASCENDED
         max_upgrade = 5 if is_pyro_asc else 15
         upgrade = input_dialog(
-            title="Enter upgrade value for %s" % item.get_name().upper().replace("-", " "),
+            title="Enter upgrade value for %s" % DarkSouls.get_name_from_arg(item.get_name()),
             text="Item type: %sPyromancy Flame" % "Ascended " if is_pyro_asc else ""
         ).run()
-        if int(upgrade) > max_upgrade or int(upgrade) < 0:
-            print("Can't upgrade %sPyromancy Flame to +%s" % ("Ascended " if is_pyro_asc else "", upgrade))
-            return None
+        try:
+            if int(upgrade) > max_upgrade or int(upgrade) < 0:
+                print("Can't upgrade %sPyromancy Flame to +%s" % ("Ascended " if is_pyro_asc else "", upgrade))
+                return None
+        except ValueError:
+            raise ArgumentError("Can't convert %s '%s' to int!" % (type(upgrade).__name__, upgrade))
         return upgrade
 
     @staticmethod
@@ -141,12 +154,15 @@ class DarkSouls(DSProcess):
         is_unique = item.get_upgrade_type() == Upgrade.UNIQUE
         max_upgrade = 5 if is_unique else 10
         upgrade = input_dialog(
-            title="Enter upgrade value for %s" % item.get_name().upper().replace("-", " "),
+            title="Enter upgrade value for %s" % DarkSouls.get_name_from_arg(item.get_name()),
             text="Item type: %s" % "Unique" if is_unique else "Armor"
         ).run()
-        if int(upgrade) > max_upgrade or int(upgrade) < 0:
-            print("Can't upgrade %s to +%s" % ("Unique" if is_unique else "Armor", upgrade))
-            return None
+        try:
+            if int(upgrade) > max_upgrade or int(upgrade) < 0:
+                print("Can't upgrade %s to +%s" % ("Unique" if is_unique else "Armor", upgrade))
+                return None
+        except ValueError:
+            raise ArgumentError("Can't convert %s '%s' to int!" % (type(upgrade).__name__, upgrade))
         return upgrade
 
     @staticmethod
@@ -168,12 +184,12 @@ class DarkSouls(DSProcess):
         from dsres.ds_commands import DS_NEST
         area_name = b_full_name.split()[0]
         if area_name not in DS_NEST["warp"].keys():
-            raise ArgumentError("Unknown area name: %s" % " ".join(area_name.split("-")).title())
+            raise ArgumentError("Unknown area name: %s" % DarkSouls.get_name_from_arg(area_name))
         else:
             bonfire_name = b_full_name.split()[1]
             if bonfire_name not in DS_NEST["warp"][area_name]:
                 raise ArgumentError("Unknown bonfire name for area '%s': %s" % (
-                    " ".join(area_name.split("-")).title(), bonfire_name
+                    DarkSouls.get_name_from_arg(area_name), bonfire_name
                 ))
         raise AssertionError("Error processing arguments: %s | Can't determine the reason of failure" % b_full_name)
 
@@ -206,7 +222,7 @@ class DarkSouls(DSProcess):
 
     def create_item(self, i_name: str, i_count: int, func):
         if i_name not in self.items.keys():
-            raise ArgumentError("Item '%s' doesn't exist!" % " ".join(i_name.split("-")).title())
+            raise ArgumentError("Item '%s' doesn't exist!" % DarkSouls.get_name_from_arg(i_name))
         else:
             item = self.items[i_name]
             i_id = item.get_id()
@@ -221,11 +237,11 @@ class DarkSouls(DSProcess):
             func(i_cat, i_id, i_count)
             print("Created new item, ID: %s" % i_id)
         except IndexError:
-            raise ArgumentError("No item ID/count specified")
+            raise ArgumentError("No item ID/count specified!")
 
     def upgrade_item(self, i_name: str, i_count: int):
         if i_name not in self.items.keys():
-            raise ArgumentError("Item '%s' doesn't exist!" % " ".join(i_name.split("-")).title())
+            raise ArgumentError("Item '%s' doesn't exist!" % DarkSouls.get_name_from_arg(i_name))
         else:
             item = self.items[i_name]
             i_id = item.get_id()
@@ -254,7 +270,7 @@ class DarkSouls(DSProcess):
                 i_id = infuse(item, self.infusions[infusion], int(upgrade))
             else:
                 raise AssertionError(
-                    "Can't determine the upgrade type for item '%s'" % " ".join(i_name.split("-")).title()
+                    "Can't determine the upgrade type for item '%s'!" % DarkSouls.get_name_from_arg(i_name)
                 )
             if i_id <= 0:
                 print("Upgrade failed")
@@ -273,22 +289,23 @@ class DarkSouls(DSProcess):
                 print("%s: Error reading bonfire: %s | %s" % (type(e).__name__, b.split(), e))
 
     def read_items(self):
-        from dsres.ds_resources import get_item_files, get_items
-        item_files = get_item_files()
-        for file in item_files:
-            items = get_items(file)
-            category = items[0] if len(items) > 0 else None
-            for i in items[1:]:
-                try:
-                    if i.strip():
-                        item = DSItem(i.strip(), int(category, 16))
-                        self.items[item.get_name()] = item
-                except ValueError as e:
-                    print("%s: Error reading item category in file '%s' | %s" % (type(e).__name__, file, e))
-                    break
-                except Exception as e:
-                    print("%s: Error reading item: %s | %s" % (type(e).__name__, i.split(), e))
-                    continue
+        from dsres.ds_resources import get_item_files, get_items, get_mod_item_files, get_mod_items
+        for func in (get_item_files, get_items), (get_mod_item_files, get_mod_items):
+            item_files = func[0]()
+            for file in item_files:
+                items = func[1](file)
+                category = items[0] if len(items) > 0 else None
+                for i in items[1:]:
+                    try:
+                        if i.strip():
+                            item = DSItem(i.strip(), int(category, 16))
+                            self.items[item.get_name()] = item
+                    except ValueError as e:
+                        print("%s: Error reading item category in file '%s' | %s" % (type(e).__name__, file, e))
+                        break
+                    except Exception as e:
+                        print("%s: Error reading item: %s | %s" % (type(e).__name__, i.title().split(), e))
+                        continue
 
     def read_infusions(self):
         from dsres.ds_resources import get_infusions
@@ -314,17 +331,17 @@ class DarkSouls(DSProcess):
 
     def validate_covenant(self, key: str):
         if key not in self.covenants.keys():
-            raise ArgumentError("Covenant '%s' doesn't exist!" % key.title())
+            raise ArgumentError("Covenant '%s' doesn't exist!" % DarkSouls.get_name_from_arg(key))
 
     def switch(self, command: str, arguments: list):
 
         dark_souls = self
 
-        def convert(data, data_type):
+        def convert(data, data_type: type):
             try:
                 return data_type(data)
             except ValueError:
-                raise ArgumentError("Can't convert %s '%s' to %s" % (type(data).__name__, data, data_type.__name__))
+                raise ArgumentError("Can't convert %s '%s' to %s!" % (type(data).__name__, data, data_type.__name__))
 
         class Switcher:
 
@@ -407,7 +424,7 @@ class DarkSouls(DSProcess):
                 dark_souls.validate_covenant(covenant_name)
                 covenant_id = dark_souls.covenants[covenant_name]
                 dark_souls.set_covenant(covenant_id)
-                print("Covenant changed to %s" % covenant_name.upper().replace("-", " "))
+                print("Covenant changed to %s" % DarkSouls.get_name_from_arg(covenant_name))
 
             @staticmethod
             def get_status():

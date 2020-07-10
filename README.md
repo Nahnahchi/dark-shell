@@ -1,4 +1,4 @@
-# dark-shell
+# DarkShell
 This is a command line tool for testing and debugging DARK SOULS - Prepare to Die Edition.
 
 Type `help` for the list of commands and `help [command]` to see the usage and available options.

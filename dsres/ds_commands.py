@@ -909,11 +909,11 @@ DS_BOOL = {
     "online-mode": None
 }
 
-DS_STATIC = {
-    "list": None,
-    "clean": None,
-    "remove": None,
-    "unlock-all-gestures": None,
+DS_NEST = {
+    "clear": None,
+    "exit": None,
+    "quit": None,
+    "end": None,
     "set": {
         "vit": None,
         "atn": None,
@@ -946,25 +946,18 @@ DS_STATIC = {
     "get": {
         "status": None,
     },
-    "enable": None,
-    "disable": None,
+    "enable": DS_BOOL,
+    "disable": DS_BOOL,
     "item-get": None,
     "item-drop": None,
     "item-get-upgrade": None,
     "item-mod": {
         "add": None,
-        "remove": None,
+        "remove": DS_CUSTOM,
         "list": None,
         "clear": None
-    }
-}
-
-DS_NEST = {
-    "static": None,
-    "clear": None,
-    "exit": None,
-    "quit": None,
-    "end": None,
+    },
+    "unlock-all-gestures": None,
     "game-restart": None,
     "menu-kick": None,
     "pos-gui": None,
@@ -1112,7 +1105,7 @@ def get_upgradable_items():
 
 
 def nest_add(names: list):
-    DS_CUSTOM.update({name: None for name in names})
+    DS_CUSTOM.update({name: None for name in names if name.strip()})
     nest_update()
 
 
@@ -1127,16 +1120,10 @@ def nest_reset():
 
 
 def nest_update():
-    DS_STATIC["item-get"] = get_all_items()
-    DS_STATIC["item-drop"] = get_all_items()
-    DS_STATIC["item-get-upgrade"] = get_upgradable_items()
-    DS_NEST.update(DS_STATIC.copy())
+    DS_NEST["item-get"] = get_all_items()
+    DS_NEST["item-drop"] = get_all_items()
+    DS_NEST["item-get-upgrade"] = get_upgradable_items()
 
-
-DS_STATIC["item-mod"]["remove"] = DS_CUSTOM
-DS_NEST["static"] = DS_STATIC
-DS_STATIC["enable"] = DS_BOOL
-DS_STATIC["disable"] = DS_BOOL
 
 nest_update()
 
