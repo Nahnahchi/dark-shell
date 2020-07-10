@@ -5,7 +5,7 @@ Type `help` for the list of commands and `help [command]` to see the usage and a
 
 Example of some of the commands:
 ```
-set name jorgen
+set name Giant Dad
 set covenant darkwraith
 item-get mask-of-the-father
 item-get-upgrade zweihander

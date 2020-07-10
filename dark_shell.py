@@ -1,24 +1,22 @@
 from dslib.ds_gui import DSPositionGUI, DSGraphicsGUI
 from dslib.ds_cmd import DSCmd
-from dsres.ds_commands import DS_NEST, DS_STATIC
-from ds_wrapper import DarkSouls
+from dsres.ds_commands import DS_NEST, DS_STATIC, nest_add
+from dsres.ds_resources import read_custom_items
+from dslib.ds_wrapper import DarkSouls
 from prompt_toolkit.shortcuts import set_title
 from threading import Thread
 from os import system, _exit
-from sys import argv
 
 
 class DarkShell(DSCmd):
 
-    def __init__(self, script=None):
+    def __init__(self):
         super(DarkShell, self).__init__()
-        self.run_static = True if script is None else False
-        self.game = DarkSouls()
+        nest_add([item.split()[3] for item in read_custom_items() if len(item.split()) == 4])
         self.set_nested_completer(DS_NEST)
-        self.execute_source(script)
-        if self.run_static:
-            open(self.game.STATIC_SOURCE, "a")
-            Thread(target=self.execute_static_commands).start()
+        self.game = DarkSouls()
+        open(self.game.STATIC_SOURCE, "a")
+        Thread(target=self.execute_static_commands).start()
 
     def execute_static_commands(self):
         execute = True
@@ -95,8 +93,6 @@ class DarkShell(DSCmd):
     def do_set(self, args):
         try:
             self.game.switch(command="set", arguments=args)
-        except ValueError:
-            print("Wrong parameter type: %s " % args[1])
         except Exception as e:
             print("%s: %s\nCouldn't complete the command" % (type(e).__name__, e))
 
@@ -160,8 +156,7 @@ class DarkShell(DSCmd):
     def do_item_drop(self, args):
         try:
             if args[0] in DarkSouls.ITEM_CATEGORIES:
-                DarkSouls.create_custom_item(DarkSouls.ITEM_CATEGORIES[args[0]],
-                                             args[1], args[2], func=self.game.item_drop)
+                DarkSouls.create_custom_item(args, func=self.game.item_drop)
                 return
             i_name, i_count = DarkSouls.get_item_name_and_count(args)
             if i_count > 0:
@@ -177,12 +172,25 @@ class DarkShell(DSCmd):
     def do_item_get(self, args):
         try:
             if args[0] in DarkSouls.ITEM_CATEGORIES:
-                DarkSouls.create_custom_item(DarkSouls.ITEM_CATEGORIES[args[0]],
-                                             args[1], args[2], func=self.game.item_get)
+                DarkSouls.create_custom_item(args, func=self.game.item_get)
                 return
             i_name, i_count = DarkSouls.get_item_name_and_count(args)
             if i_count > 0:
                 self.game.create_item(i_name, i_count, func=self.game.item_get)
+        except Exception as e:
+            print("%s: %s\nCouldn't complete the command" % (type(e).__name__, e))
+
+    @staticmethod
+    def help_item_mod():
+        print("\nUsage:\titem-mod add\n")
+        print("\titem-mod remove [item-name]\n")
+        print("\titem-mod clear\n")
+
+    def do_item_mod(self, args):
+        try:
+            if DarkSouls.add_new_item(args):
+                self.set_nested_completer(DS_NEST)
+                Thread(target=self.game.read_items).start()
         except Exception as e:
             print("%s: %s\nCouldn't complete the command" % (type(e).__name__, e))
 
@@ -200,7 +208,7 @@ class DarkShell(DSCmd):
 
     @staticmethod
     def help_warp():
-        print("\nUsage:\twarp [option [option]]")
+        print("\nUsage:\twarp [area-name [bonfire-name]]")
         print("\nOptions:")
         for opt in DS_NEST["warp"].keys():
             if DS_NEST["warp"][opt] is not None:
@@ -215,7 +223,7 @@ class DarkShell(DSCmd):
         try:
             if args[0] == "bonfire":
                 if not self.game.bonfire_warp():
-                    print("Failed to warp")
+                    print("Failed to warp | Memory couldn't be written")
             else:
                 b_name = " ".join(args[0:])
                 self.game.bonfire_warp_by_name(b_name)
@@ -232,7 +240,5 @@ class DarkShell(DSCmd):
 
 if __name__ == "__main__":
     set_title("Dark Shell")
-    source = argv[1] if len(argv) > 1 else None
-    if source is None:
-        print("Welcome to Dark Shell")
-    DarkShell(script=source).cmd_loop()
+    print("Welcome to Dark Shell")
+    DarkShell().cmd_loop()

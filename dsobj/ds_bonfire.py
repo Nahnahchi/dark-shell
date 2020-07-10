@@ -1,13 +1,13 @@
 
 class DSBonfire:
 
-    def __init__(self, res: str):
-        res = res.split()
-        self.b_id = int(res[0])
-        self.b_name = " ".join(res[1:])
+    def __init__(self, source: str):
+        source = source.split()
+        self.bonfire_id = int(source[0])
+        self.bonfire_name = " ".join(source[1:])
 
     def get_id(self):
-        return self.b_id
+        return self.bonfire_id
 
     def get_name(self):
-        return self.b_name
+        return self.bonfire_name

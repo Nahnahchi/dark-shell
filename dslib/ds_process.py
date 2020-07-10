@@ -15,7 +15,38 @@ def ptr(offset: int):
     return IntPtr.op_Explicit(Int32(offset))
 
 
-class Stat(Enum):
+class ReadMemoryError(Exception):
+
+    def __init__(self, message="Failed to read memory"):
+        self.message = message
+        super(ReadMemoryError, self).__init__(self.message)
+
+
+class WriteMemoryError(Exception):
+
+    def __init__(self, message="Failed to write memory"):
+        self.message = message
+        super(WriteMemoryError, self).__init__(self.message)
+
+
+class AsmExecuteError(Exception):
+
+    ERR = {
+        0x00000080: "WAIT_ABANDONED",
+        0x00000102: "WAIT_TIMEOUT",
+        0xFFFFFFFF: "WAIT_FAILED"
+    }
+
+    def __init__(self, code, message="Failed to execute assembly"):
+        self.message = message
+        self.error = AsmExecuteError.ERR[code] if code in AsmExecuteError.ERR.keys() else "REASON_UNKNOWN"
+        super(AsmExecuteError, self).__init__(self.message)
+
+    def __str__(self):
+        return "%s (%s)" % (self.message, self.error)
+
+
+class Stats(Enum):
 
     VIT = "vit"
     ATN = "atn"
@@ -96,10 +127,7 @@ class DSProcess:
 
     def scan_aob(self):
 
-        p = self.pointers
-        h = self.hook
-        i = Index
-        o = DSOffsets
+        p, h, i, o = self.pointers, self.hook, Index, DSOffsets
 
         p[i.CHECK_VERSION] = h.CreateBasePointer(ptr(o.CHECK_VERSION))
 
@@ -168,7 +196,8 @@ class DSProcess:
         Kernel32.WriteBytes(self.hook.Handle, insert_ptr, byte_array)
         result = self.hook.Execute(insert_ptr)
         self.hook.Free(insert_ptr)
-        return result == 0
+        if result != 0:
+            raise AsmExecuteError(result)
 
     @staticmethod
     def get_event_flag_offset(flag_id):
@@ -189,26 +218,37 @@ class DSProcess:
                 return offset, mask
 
     def read_event_flag(self, flag_id):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         address, mask = self.get_event_flag_offset(flag_id)
         return self.pointers[Index.EVENT_FLAGS].ReadFlag32(address, mask)
 
     def write_event_flag(self, flag_id, value: bool):
         address, mask = self.get_event_flag_offset(flag_id)
-        return self.pointers[Index.EVENT_FLAGS].WriteFlag32(address, mask, value)
+        if not self.pointers[Index.EVENT_FLAGS].WriteFlag32(address, mask, value):
+            raise WriteMemoryError()
 
     def set_game_speed(self, speed: float):
-        return self.pointers[Index.ANIM_DATA].WriteSingle(DSOffsets.AnimData.PLAY_SPEED, speed)
+        if not self.pointers[Index.ANIM_DATA].WriteSingle(DSOffsets.AnimData.PLAY_SPEED, speed):
+            raise WriteMemoryError()
 
     def death_cam(self, enable: bool):
-        return self.pointers[Index.UNKNOWN_B].WriteBoolean(DSOffsets.UnknownB.DEATH_CAM, enable)
+        if not self.pointers[Index.UNKNOWN_B].WriteBoolean(DSOffsets.UnknownB.DEATH_CAM, enable):
+            raise WriteMemoryError()
 
     def game_restart(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.GAME_MAN].WriteFlag32(DSOffsets.GameMan.B_REQUEST_TO_ENDING, 1, True)
 
     def disable_fps_disconnect(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.GAME_MAN].WriteInt32(DSOffsets.GameMan.IS_FPS_DISCONNECTION, 0)
 
     def unlock_all_gestures(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         result = True
         for gesture in vars(DSOffsets.Gestures).values():
             if isinstance(gesture, int):
@@ -216,25 +256,36 @@ class DSProcess:
         return result
 
     def menu_kick(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.UNKNOWN_C].WriteInt32(DSOffsets.UnknownC.MENU_KICK, 2)
 
     def set_phantom_type(self, value: int):
-        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PHANTOM_TYPE, value)
+        if not self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PHANTOM_TYPE, value):
+            raise WriteMemoryError()
 
     def get_phantom_type(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_A].ReaadInt32(DSOffsets.CharDataA.PHANTOM_TYPE)
 
     def set_team_type(self, value: int):
-        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.TEAM_TYPE, value)
+        if not self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.TEAM_TYPE, value):
+            raise WriteMemoryError()
 
     def get_team_type(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_A].ReadInt32(DSOffsets.CharDataA.TEAM_TYPE)
 
     def get_play_region(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_A].ReadInt32(DSOffsets.CharDataA.PLAY_REGION)
 
     def set_play_region(self, value: int):
-        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PLAY_REGION, value)
+        if not self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.PLAY_REGION, value):
+            raise WriteMemoryError()
 
     def get_world(self):
         return self.pointers[Index.UNKNOWN_A].ReadByte(DSOffsets.UnknownA.WORLD)
@@ -243,141 +294,183 @@ class DSProcess:
         return self.pointers[Index.UNKNOWN_A].ReadByte(DSOffsets.UnknownA.AREA)
 
     def set_super_armor(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
-                                                            DSOffsets.CharFlagsA.SET_SUPER_ARMOR, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_SUPER_ARMOR, int(enable)):
+            raise WriteMemoryError()
 
     def set_draw_enable(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
-                                                            DSOffsets.CharFlagsA.SET_DRAW_ENABLE, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DRAW_ENABLE, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_gravity(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
-                                                            DSOffsets.CharFlagsA.SET_DISABLE_GRAVITY, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DISABLE_GRAVITY, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_collision(self, enable: bool):
-        return self.pointers[Index.CHAR_MAP_DATA].WriteFlag32(DSOffsets.CharMapData.CHAR_MAP_FLAGS,
-                                                              DSOffsets.CharMapFlags.DISABLE_MAP_HIT, int(enable))
+        if not self.pointers[Index.CHAR_MAP_DATA].WriteFlag32(DSOffsets.CharMapData.CHAR_MAP_FLAGS,
+                                                              DSOffsets.CharMapFlags.DISABLE_MAP_HIT, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_dead(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_DEAD, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_DEAD, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_move(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_MOVE, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_MOVE, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_stamina_consume(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_STAMINA_CONSUME, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_STAMINA_CONSUME, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_goods_consume(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_GOODS_CONSUME, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_GOODS_CONSUME, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_update(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_UPDATE, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_UPDATE, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_attack(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_ATTACK, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_ATTACK, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_damage(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_DAMAGE, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_DAMAGE, int(enable)):
+            raise WriteMemoryError()
 
     def set_no_hit(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
-                                                            DSOffsets.CharFlagsB.NO_HIT, int(enable))
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_2,
+                                                            DSOffsets.CharFlagsB.NO_HIT, int(enable)):
+            raise WriteMemoryError()
 
     def get_player_dead_mode(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
                                                             DSOffsets.CharFlagsA.SET_DEAD_MODE)
 
     def set_player_dead_mode(self, enable: bool):
-        return self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
-                                                            DSOffsets.CharFlagsA.SET_DEAD_MODE, enable)
+        if not self.pointers[Index.CHAR_DATA_A].WriteFlag32(DSOffsets.CharDataA.CHAR_FLAGS_1,
+                                                            DSOffsets.CharFlagsA.SET_DEAD_MODE, enable):
+            raise WriteMemoryError()
 
     def set_no_magic_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_MAGIC_QTY_CONSUME].WriteBoolean(0, enable)
+        if not self.pointers[Index.ALL_NO_MAGIC_QTY_CONSUME].WriteBoolean(0, enable):
+            raise WriteMemoryError()
 
     def set_no_stamina_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(0, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(0, enable):
+            raise WriteMemoryError()
 
     def set_exterminate(self, enable: bool):
-        return self.pointers[Index.PLAYER_EXTERMINATE].WriteBoolean(0, enable)
+        if not self.pointers[Index.PLAYER_EXTERMINATE].WriteBoolean(0, enable):
+            raise WriteMemoryError()
 
     def set_no_ammo_consume_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_ARROW_CONSUME, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_ARROW_CONSUME, enable):
+            raise WriteMemoryError()
 
     def set_hide(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.PLAYER_HIDE, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.PLAYER_HIDE, enable):
+            raise WriteMemoryError()
 
     def set_silence(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.PLAYER_SILENCE, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.PLAYER_SILENCE, enable):
+            raise WriteMemoryError()
 
     def set_no_dead_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_DEAD, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_DEAD, enable):
+            raise WriteMemoryError()
 
     def set_no_damage_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_DAMAGE, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_DAMAGE, enable):
+            raise WriteMemoryError()
 
     def set_no_hit_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_HIT, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_HIT, enable):
+            raise WriteMemoryError()
 
     def set_no_attack_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_ATTACK, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_ATTACK, enable):
+            raise WriteMemoryError()
 
     def set_no_move_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_MOVE, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_MOVE, enable):
+            raise WriteMemoryError()
 
     def set_no_update_ai_all(self, enable: bool):
-        return self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_UPDATE_AI, enable)
+        if not self.pointers[Index.ALL_NO_STAMINA_CONSUME].WriteBoolean(DSOffsets.ChrDbg.ALL_NO_UPDATE_AI, enable):
+            raise WriteMemoryError()
 
     def disable_all_area_enemies(self, disable: bool):
-        return self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_ENEMIES, disable):
+            raise WriteMemoryError()
 
     def disable_all_area_event(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_EVENT, disable):
+            raise WriteMemoryError()
 
     def disable_all_area_map(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_MAP, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_MAP, disable):
+            raise WriteMemoryError()
 
     def disable_all_area_obj(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_OBJ, disable):
+            raise WriteMemoryError()
 
     def enable_all_area_obj(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ENABLE_ALL_AREA_OBJ, enable):
+            raise WriteMemoryError()
 
     def enable_all_area_obj_break(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ENABLE_ALL_AREA_OBJ_BREAK, enable):
+            raise WriteMemoryError()
 
     def disable_all_area_hi_hit(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_HI_HIT, disable):
+            raise WriteMemoryError()
 
     def disable_all_area_lo_hit(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_LO_HIT, disable):
+            raise WriteMemoryError()
 
     def disable_all_area_sfx(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_SFX, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_SFX, disable):
+            raise WriteMemoryError()
 
     def disable_all_area_sound(self, disable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, disable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DISABLE_ALL_AREA_SOUND, disable):
+            raise WriteMemoryError()
 
     def enable_obj_break_record_mode(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_OBJ_BREAK_RECORD_MODE, enable):
+            raise WriteMemoryError()
 
     def enable_auto_map_warp_mode(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_AUTO_MAP_WARP_MODE, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_AUTO_MAP_WARP_MODE, enable):
+            raise WriteMemoryError()
 
     def enable_chr_npc_wander_test(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_CHR_NPC_WANDER_TEST, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_CHR_NPC_WANDER_TEST, enable):
+            raise WriteMemoryError()
 
     def enable_dbg_chr_all_dead(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DBG_CHR_ALL_DEAD, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_DBG_CHR_ALL_DEAD, enable):
+            raise WriteMemoryError()
 
     def enable_online_mode(self, enable: bool):
-        self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ONLINE_MODE, enable)
+        if not self.pointers[Index.GAME_MAN].WriteBoolean(DSOffsets.GameMan.IS_ONLINE_MODE, enable):
+            raise WriteMemoryError()
 
     def draw_bounding(self, enable: bool):
         return self.pointers[Index.GRAPHICS_DATA].WriteBoolean(DSOffsets.GraphicsData.DRAW_BOUNDING_BOXES, enable)
@@ -444,87 +537,123 @@ class DSProcess:
         return self.pointers[Index.GRAPHICS_DATA].WriteSingle(DSOffsets.GraphicsData.HUE, hue)
 
     def get_class(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadByte(DSOffsets.CharDataB.CLASS)
 
     def set_class(self, value: int):
-        return self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.CLASS, value)
+        if not self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.CLASS, value):
+            raise WriteMemoryError()
 
     def get_soul_level(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.SOUL_LEVEL)
 
     def get_souls(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.SOULS)
 
     def set_souls(self, value: int):
-        return self.pointers[Index.CHAR_DATA_B].WriteInt32(DSOffsets.CharDataB.SOULS, value)
+        if not self.pointers[Index.CHAR_DATA_B].WriteInt32(DSOffsets.CharDataB.SOULS, value):
+            raise WriteMemoryError()
 
     def get_humanity(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HUMANITY)
 
     def set_humanity(self, value: int):
-        return self.pointers[Index.CHAR_DATA_B].WriteInt32(DSOffsets.CharDataB.HUMANITY, value)
+        if not self.pointers[Index.CHAR_DATA_B].WriteInt32(DSOffsets.CharDataB.HUMANITY, value):
+            raise WriteMemoryError()
 
     def get_hp(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HP)
 
     def set_hp(self, value: int):
-        return self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.HP, value)
+        if not self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.HP, value):
+            raise WriteMemoryError()
 
     def get_hp_max(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HP_MAX)
 
     def get_hp_mod_max(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.HP_MOD_MAX)
 
     def get_stamina(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.STAMINA_MOD_MAX)
 
     def get_vitality(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.VITALITY)
 
     def get_attunement(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.ATTUNEMENT)
 
     def get_endurance(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.ENDURANCE)
 
     def get_strength(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.STRENGTH)
 
     def get_dexterity(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.DEXTERITY)
 
     def get_resistance(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.RESISTANCE)
 
     def get_intelligence(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.INTELLIGENCE)
 
     def get_faith(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt32(DSOffsets.CharDataB.FAITH)
 
-    def get_stat(self, stat: Stat):
-        if stat == Stat.VIT:
+    def get_stat(self, stat: Stats):
+        if stat == Stats.VIT:
             return self.get_vitality()
-        elif stat == Stat.ATN:
+        elif stat == Stats.ATN:
             return self.get_attunement()
-        elif stat == Stat.END:
+        elif stat == Stats.END:
             return self.get_endurance()
-        elif stat == Stat.STR:
+        elif stat == Stats.STR:
             return self.get_strength()
-        elif stat == Stat.DEX:
+        elif stat == Stats.DEX:
             return self.get_dexterity()
-        elif stat == Stat.RES:
+        elif stat == Stats.RES:
             return self.get_resistance()
-        elif stat == Stat.INT:
+        elif stat == Stats.INT:
             return self.get_intelligence()
-        elif stat == Stat.FTH:
+        elif stat == Stats.FTH:
             return self.get_faith()
-        elif stat == Stat.SLV:
+        elif stat == Stats.SLV:
             return self.get_soul_level()
-        elif stat == Stat.SLS:
+        elif stat == Stats.SLS:
             return self.get_souls()
-        elif stat == Stat.HUM:
+        elif stat == Stats.HUM:
             return self.get_humanity()
 
     def level_up(self, new_stats: dict):
@@ -535,16 +664,16 @@ class DSProcess:
 
         def write(offs, stat): Kernel32.WriteInt32(self.hook.Handle, ptr(stats + offs), stat)
 
-        write(level.VIT, new_stats[Stat.VIT])
-        write(level.ATN, new_stats[Stat.ATN])
-        write(level.END, new_stats[Stat.END])
-        write(level.STR, new_stats[Stat.STR])
-        write(level.DEX, new_stats[Stat.DEX])
-        write(level.RES, new_stats[Stat.RES])
-        write(level.INT, new_stats[Stat.INT])
-        write(level.FTH, new_stats[Stat.FTH])
-        write(level.SLV, new_stats[Stat.SLV])
-        write(level.SLS, new_stats[Stat.SLS])
+        write(level.VIT, new_stats[Stats.VIT])
+        write(level.ATN, new_stats[Stats.ATN])
+        write(level.END, new_stats[Stats.END])
+        write(level.STR, new_stats[Stats.STR])
+        write(level.DEX, new_stats[Stats.DEX])
+        write(level.RES, new_stats[Stats.RES])
+        write(level.INT, new_stats[Stats.INT])
+        write(level.FTH, new_stats[Stats.FTH])
+        write(level.SLV, new_stats[Stats.SLV])
+        write(level.SLS, new_stats[Stats.SLS])
 
         self.set_no_dead(True)
         result = \
@@ -601,12 +730,17 @@ class DSProcess:
         return self.pointers[Index.CHR_FOLLOW_CAM].WriteBytes(0, byte_arr)
 
     def get_bonfire(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.WORLD_STATE].ReadInt32(DSOffsets.WorldState.LAST_BONFIRE)
 
     def set_bonfire(self, bonfire_id: int):
-        return self.pointers[Index.WORLD_STATE].WriteInt32(DSOffsets.WorldState.LAST_BONFIRE, bonfire_id)
+        if not self.pointers[Index.WORLD_STATE].WriteInt32(DSOffsets.WorldState.LAST_BONFIRE, bonfire_id):
+            raise WriteMemoryError()
 
     def get_name(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadString(DSOffsets.CharDataB.CHAR_NAME, Encoding.Unicode, 0x22)
 
     def set_name(self, name: str):
@@ -614,25 +748,35 @@ class DSProcess:
                                                             Encoding.Unicode, 0x22, name)
 
     def get_sex(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadInt16(DSOffsets.CharDataB.GENDER)
 
     def set_sex(self, value: int):
-        return self.pointers[Index.CHAR_DATA_B].WriteInt16(DSOffsets.CharDataB.GENDER, value)
+        if not self.pointers[Index.CHAR_DATA_B].WriteInt16(DSOffsets.CharDataB.GENDER, value):
+            raise WriteMemoryError()
 
     def get_physique(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadByte(DSOffsets.CharDataB.PHYSIQUE)
 
     def set_physique(self, value: int):
-        return self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.PHYSIQUE, value)
+        if not self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.PHYSIQUE, value):
+            raise WriteMemoryError()
 
     def set_covenant(self, value: int):
-        return self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.COVENANT, value)
+        if not self.pointers[Index.CHAR_DATA_B].WriteByte(DSOffsets.CharDataB.COVENANT, value):
+            raise WriteMemoryError()
 
     def get_covenant(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
         return self.pointers[Index.CHAR_DATA_B].ReadByte(DSOffsets.CharDataB.COVENANT)
 
     def set_ng_mode(self, value: int):
-        return self.pointers[Index.CHAR_DATA_C].WriteInt32(DSOffsets.CharDataC.NEW_GAME_MODE, value)
+        if not self.pointers[Index.CHAR_DATA_C].WriteInt32(DSOffsets.CharDataC.NEW_GAME_MODE, value):
+            raise WriteMemoryError()
 
     def item_drop(self, category, item_id, count):
         return \

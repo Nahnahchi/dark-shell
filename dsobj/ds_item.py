@@ -14,13 +14,13 @@ class Upgrade(Enum):
 
 class DSItem:
 
-    def __init__(self, res: str, category: int):
-        res = res.split()
+    def __init__(self, source: str, category: int):
+        source = source.split()
         self.category = category
-        self.item_id = int(res[0])
-        self.stack_limit = int(res[1])
-        self.upgrade_type = Upgrade(int(res[2]))
-        self.item_name = res[3]
+        self.item_id = int(source[0])
+        self.stack_limit = int(source[1])
+        self.upgrade_type = Upgrade(int(source[2]))
+        self.item_name = source[3]
 
     def get_id(self):
         return self.item_id
