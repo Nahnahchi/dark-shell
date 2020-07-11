@@ -5,7 +5,7 @@ from traceback import format_exc
 from colorama import Fore
 
 
-class DSParser:
+class CmdParser:
 
     def __init__(self, args: str):
         args = args.split()
@@ -46,10 +46,11 @@ class DSCmd:
                     history=self.history,
                     enable_history_search=True
                 )
-                parser = DSParser(user_inp)
-                command = parser.get_command()
-                arguments = parser.get_arguments()
-                self.execute_command(command, arguments)
+                parser = CmdParser(user_inp)
+                self.execute_command(
+                    command=parser.get_command(),
+                    arguments=parser.get_arguments()
+                )
             except KeyboardInterrupt:
                 if self.debug:
                     print(Fore.RED + format_exc() + Fore.RESET)

@@ -15,6 +15,7 @@ from colorama import Fore
 
 
 class DarkSouls(DSProcess):
+
     PROCESS_NAME = "DARK SOULS"
     STATIC_SOURCE = join(SAVE_DIR, "static.dat")
     STATIC_FUNC = {}
@@ -40,7 +41,7 @@ class DarkSouls(DSProcess):
         Thread(target=self.read_static_func).start()
 
     def update_version(self):
-        set_title("Dark Shell - Game Version: %s" % self.get_version())
+        set_title("Dark Shell — Game Version: %s" % self.get_version())
 
     @staticmethod
     def get_name_from_arg(arg: str):
@@ -187,10 +188,14 @@ class DarkSouls(DSProcess):
     @staticmethod
     def raise_warp_error(b_full_name: str):
         from dsres.ds_commands import DS_NEST
+        if not b_full_name.strip():
+            raise ArgumentError("No arguments given!")
         area_name = b_full_name.split()[0]
         if area_name not in DS_NEST["warp"].keys():
             raise ArgumentError("Unknown area name: %s" % DarkSouls.get_name_from_arg(area_name))
         else:
+            if len(b_full_name.split()) < 2:
+                raise ArgumentError("No bonfire name specified!")
             bonfire_name = b_full_name.split()[1]
             if bonfire_name not in DS_NEST["warp"][area_name]:
                 raise ArgumentError("Unknown bonfire name for area '%s': %s" % (
@@ -350,7 +355,7 @@ class DarkSouls(DSProcess):
         try:
             static_func = load(open(DarkSouls.STATIC_SOURCE, "rb"))
             DarkSouls.STATIC_FUNC.update(static_func)
-        except (FileNotFoundError, UnpicklingError, EOFError) as e:
+        except (FileNotFoundError, UnpicklingError, EOFError):
             open(DarkSouls.STATIC_SOURCE, "w+")
             DarkSouls.STATIC_FUNC.clear()
 

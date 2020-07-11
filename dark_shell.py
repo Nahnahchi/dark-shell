@@ -296,6 +296,6 @@ if __name__ == "__main__":
     ))
     try:
         DarkShell().cmd_loop()
-    except Exception as e:
-        print(Fore.RED + (format_exc() if _DEBUG else "[FATAL] %s: %s" % (type(e).__name__, e)) + Fore.RESET)
+    except Exception as ex:
+        print(Fore.RED + (format_exc() if _DEBUG else "[FATAL] %s: %s" % (type(ex).__name__, ex)) + Fore.RESET)
         input()
