@@ -15,7 +15,7 @@ warp oolacile-township bonfire
 
 To manage event flags type `enable [flag-id]` or `disable [flag-id]`, to read flags: `get [flag-id]`.
 
-You can create custom items that you'me modded into GameParams by either:
+You can create custom items that you've modded into GameParams by either:
 - Spawning it by ID: `item-get [category-name] [item-ID] [count]`
 OR
 - Adding it to the list of known items: `item-mod add`
