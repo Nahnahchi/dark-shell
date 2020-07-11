@@ -9,7 +9,7 @@ from os.path import join
 
 class DSGraphicsGUI(Tk):
 
-    SAVE_FILE = join(SAVE_DIR, "graphics")
+    SAVE_FILE = join(SAVE_DIR, "graphics.dat")
     SAVED_DATA = {
         "override f": False,
         "sync br": True,
@@ -30,7 +30,7 @@ class DSGraphicsGUI(Tk):
 
         try:
             saved = load(open(DSGraphicsGUI.SAVE_FILE, "rb"))
-        except (UnpicklingError, FileNotFoundError):
+        except (UnpicklingError, FileNotFoundError, EOFError):
             saved = DSGraphicsGUI.SAVED_DATA
 
         self.process = process

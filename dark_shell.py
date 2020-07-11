@@ -8,6 +8,12 @@ from prompt_toolkit.shortcuts import set_title
 from threading import Thread
 from os import system, _exit
 from _version import __version__, check_for_updates, CheckUpdatesError
+from sys import argv
+from traceback import print_exc
+import colored_traceback.always
+
+
+DEBUG = False
 
 
 class DarkShell(DSCmd):
@@ -17,18 +23,22 @@ class DarkShell(DSCmd):
         nest_add([DSItem(item.strip(), -1).get_name() for item in read_mod_items()])
         self.set_nested_completer(DS_NEST)
         self.game = DarkSouls()
-        open(self.game.STATIC_SOURCE, "a")
         Thread(target=self.execute_static_commands).start()
 
     def execute_static_commands(self):
         execute = True
         while True:
             if execute:
-                if self.game.is_loaded():
-                    self.execute_source(self.game.STATIC_SOURCE)
-                    execute = False
-                else:
+                if not self.game.is_loaded():
                     continue
+                else:
+                    try:
+                        static_commands = DarkSouls.STATIC_FUNC.copy()
+                        for func in static_commands.keys():
+                            self.game.switch(command=func[0], arguments=static_commands[func])
+                    except Exception as e:
+                        print("%s: %s" % (type(e).__name__, e))
+                    execute = False
             if not self.game.is_loaded():
                 execute = True
 
@@ -255,12 +265,16 @@ class DarkShell(DSCmd):
 
 if __name__ == "__main__":
     print("Loading...")
+    if len(argv) > 1 and argv[1] in ("-d", "--debug"):
+        DEBUG = True
     set_title("DarkShell")
     try:
         is_latest, version = check_for_updates()
-    except CheckUpdatesError:
+        DarkShell.do_clear(args=[])
+    except CheckUpdatesError as e:
+        if DEBUG:
+            print_exc()
         is_latest, version = True, __version__
-    DarkShell.do_clear(args=[])
     print("Welcome to DarkShell %s%s" % (
         "v" + __version__, (" (v%s is available)" % version) if not is_latest else ""
     ))

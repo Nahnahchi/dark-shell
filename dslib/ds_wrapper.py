@@ -7,6 +7,7 @@ from dsres.ds_commands import nest_reset, nest_remove, nest_add
 from os.path import join
 from collections import defaultdict
 from threading import Thread
+from pickle import dump, load, UnpicklingError
 from ctypes import ArgumentError
 from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog, set_title
 
@@ -14,7 +15,8 @@ from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dial
 class DarkSouls(DSProcess):
 
     PROCESS_NAME = "DARK SOULS"
-    STATIC_SOURCE = join(SAVE_DIR, "static")
+    STATIC_SOURCE = join(SAVE_DIR, "static.dat")
+    STATIC_FUNC = {}
     ITEM_CATEGORIES = {
         "weapon": 0x00000000,
         "good": 0x40000000,
@@ -33,6 +35,7 @@ class DarkSouls(DSProcess):
         Thread(target=self.read_items).start()
         Thread(target=self.read_infusions).start()
         Thread(target=self.read_covenants).start()
+        Thread(target=self.read_static_func).start()
 
     def update_version(self):
         set_title("Dark Shell - Game Version: %s" % self.get_version())
@@ -329,6 +332,20 @@ class DarkSouls(DSProcess):
             except Exception as e:
                 print("%s: Error reading covenant: %s | %s" % (type(e).__name__, c.split(), e))
 
+    @staticmethod
+    def read_static_func():
+        try:
+            static_func = load(open(DarkSouls.STATIC_SOURCE, "rb"))
+            DarkSouls.STATIC_FUNC.update(static_func)
+        except (FileNotFoundError, UnpicklingError, EOFError) as e:
+            print(e)
+            open(DarkSouls.STATIC_SOURCE, "w+")
+            DarkSouls.STATIC_FUNC.clear()
+
+    @staticmethod
+    def write_static_func():
+        dump(DarkSouls.STATIC_FUNC, open(DarkSouls.STATIC_SOURCE, "wb"))
+
     def validate_covenant(self, key: str):
         if key not in self.covenants.keys():
             raise ArgumentError("Covenant '%s' doesn't exist!" % DarkSouls.get_name_from_arg(key))
@@ -372,15 +389,14 @@ class DarkSouls(DSProcess):
                 print("EVENT FLAG %d %s" % (flag_id, ("enabled" if enable else "disabled")))
 
             @staticmethod
-            def static_default():
-                with open(DarkSouls.STATIC_SOURCE, "a") as static_source:
-                    static_source.write(" ".join(arguments) + "\n")
-
-            @staticmethod
             def set_speed_game():
                 speed = convert(arguments[1], float)
                 dark_souls.set_game_speed(speed)
                 print("Game speed changed to %.2f" % speed)
+                if speed == 1.0:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def set_phantom_type():
@@ -435,138 +451,230 @@ class DarkSouls(DSProcess):
                 enable = arguments[1]
                 dark_souls.set_super_armor(enable)
                 print("SUPER ARMOR %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_draw():
                 enable = arguments[1]
                 dark_souls.set_draw_enable(enable)
                 print("DRAW %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_gravity():
                 enable = arguments[1]
                 dark_souls.set_no_gravity(not enable)
                 print("GRAVITY %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_dead():
                 enable = arguments[1]
                 dark_souls.set_no_dead(enable)
                 print("NO DEAD %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_stamina_consume():
                 enable = arguments[1]
                 dark_souls.set_no_stamina_consume(enable)
                 print("NO STAMINA CONSUME %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_goods_consume():
                 enable = arguments[1]
                 dark_souls.set_no_goods_consume(enable)
                 print("NO GOODS CONSUME %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_update():
                 enable = arguments[1]
                 dark_souls.set_no_update(enable)
                 print("NO UPDATE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_attack():
                 enable = arguments[1]
                 dark_souls.set_no_attack(enable)
                 print("NO ATTACK %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_move():
                 enable = arguments[1]
                 dark_souls.set_no_move(enable)
                 print("NO MOVE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_damage():
                 enable = arguments[1]
                 dark_souls.set_no_damage(enable)
                 print("NO DAMAGE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_hit():
                 enable = arguments[1]
                 dark_souls.set_no_hit(enable)
                 print("NO HIT %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_magic_all():
                 enable = arguments[1]
                 dark_souls.set_no_magic_all(enable)
                 print("NO MAGIC ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_ammo_consume_all():
                 enable = arguments[1]
                 dark_souls.set_no_ammo_consume_all(enable)
                 print("NO AMMO CONSUME ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_dead_all():
                 enable = arguments[1]
                 dark_souls.set_no_dead_all(enable)
                 print("NO DEAD ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_damage_all():
                 enable = arguments[1]
                 dark_souls.set_no_damage_all(enable)
                 print("NO DAMAGE ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_hit_all():
                 enable = arguments[1]
                 dark_souls.set_no_hit_all(enable)
                 print("NO HIT ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_attack_all():
                 enable = arguments[1]
                 dark_souls.set_no_attack_all(enable)
                 print("NO ATTACK ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_no_move_all():
                 enable = arguments[1]
                 dark_souls.set_no_move_all(enable)
                 print("NO MOVE ALL %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_death_cam():
                 enable = arguments[1]
                 dark_souls.death_cam(enable)
                 print("DEATH CAM %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_player_dead_mode():
                 enable = arguments[1]
                 dark_souls.set_player_dead_mode(enable)
                 print("PLAYER DEAD MODE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_player_exterminate():
                 enable = arguments[1]
                 dark_souls.set_exterminate(enable)
                 print("PLAYER EXTERMINATE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_player_hide():
                 enable = arguments[1]
                 dark_souls.set_hide(enable)
                 print("PLAYER HIDE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_player_silence():
                 enable = arguments[1]
                 dark_souls.set_silence(enable)
                 print("PLAYER SILENCE %s" % ("enabled" if enable else "disabled"))
+                if not enable:
+                    DarkSouls.STATIC_FUNC.pop((command, arguments[0]))
+                else:
+                    DarkSouls.STATIC_FUNC[(command, arguments[0])] = arguments
 
             @staticmethod
             def enable_event():
@@ -655,21 +763,5 @@ class DarkSouls(DSProcess):
                 dark_souls.enable_online_mode(enable)
                 print("ONLINE MODE %s" % ("enabled" if enable else "disabled"))
 
-            @staticmethod
-            def static_list():
-                lines = open(DarkSouls.STATIC_SOURCE, "r").readlines()
-                for i in range(len(lines)):
-                    print("\t%d %s" % (i, lines[i].strip()))
-
-            @staticmethod
-            def static_remove():
-                remove_ind = int(arguments[1])
-                lines = open(DarkSouls.STATIC_SOURCE, "r").readlines()
-                del lines[remove_ind]
-                open(DarkSouls.STATIC_SOURCE, "w").writelines(lines)
-
-            @staticmethod
-            def static_clean():
-                open(DarkSouls.STATIC_SOURCE, "w").write("")
-
         Switcher.switch()
+        DarkSouls.write_static_func()
