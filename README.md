@@ -7,16 +7,15 @@ Example of some of the commands:
 ```
 set name Giant Dad
 set covenant darkwraith
-item-get mask-of-the-father
+item-get grass-crest-shield 
 item-get-upgrade zweihander
 disable npc
-warp firelink-shrine bonfire
+warp oolacile-township bonfire
 ```
 
 To manage event flags type `enable [flag-id]` or `disable [flag-id]`, to read flags: `get [flag-id]`.
 
-If you want a certain command to be executed every time the program or the game is reloaded, use the `static` command:
-```
-static enable no-dead
-static item-drop titanite-slab 3
-```
+You can create custom items that you'me modded into GameParams by either:
+- Spawning it by ID: `item-get [category-name] [item-ID] [count]`
+OR
+- Adding it to the list of known items: `item-mod add`
