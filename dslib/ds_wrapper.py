@@ -10,10 +10,11 @@ from threading import Thread
 from pickle import dump, load, UnpicklingError
 from ctypes import ArgumentError
 from prompt_toolkit.shortcuts import radiolist_dialog, input_dialog, yes_no_dialog, set_title
+from traceback import format_exc
+from colorama import Fore
 
 
 class DarkSouls(DSProcess):
-
     PROCESS_NAME = "DARK SOULS"
     STATIC_SOURCE = join(SAVE_DIR, "static.dat")
     STATIC_FUNC = {}
@@ -24,8 +25,9 @@ class DarkSouls(DSProcess):
         "armor": 0x10000000
     }
 
-    def __init__(self):
+    def __init__(self, debug=False):
         super(DarkSouls, self).__init__(DarkSouls.PROCESS_NAME)
+        self.debug = debug
         self.bonfires = defaultdict(DSBonfire)
         self.items = defaultdict(DSItem)
         self.infusions = defaultdict(DSInfusion)
@@ -289,7 +291,9 @@ class DarkSouls(DSProcess):
                 bonfire = DSBonfire(b.strip())
                 self.bonfires[bonfire.get_name()] = bonfire
             except Exception as e:
-                print("%s: Error reading bonfire: %s | %s" % (type(e).__name__, b.split(), e))
+                print(Fore.RED + (format_exc() if self.debug else
+                                  "%s: Error reading bonfire: %s | %s" %
+                                  (type(e).__name__, b.split(), e)) + Fore.RESET)
 
     def read_items(self):
         from dsres.ds_resources import get_item_files, get_items, get_mod_item_files, get_mod_items
@@ -304,10 +308,15 @@ class DarkSouls(DSProcess):
                             item = DSItem(i.strip(), int(category, 16))
                             self.items[item.get_name()] = item
                     except ValueError as e:
-                        print("%s: Error reading item category in file '%s' | %s" % (type(e).__name__, file, e))
+                        print(
+                            Fore.RED + (format_exc() if self.debug else
+                                        "%s: Error reading item category in file '%s' | %s" %
+                                        (type(e).__name__, file, e)) + Fore.RESET)
                         break
                     except Exception as e:
-                        print("%s: Error reading item: %s | %s" % (type(e).__name__, i.title().split(), e))
+                        print(Fore.RED + (format_exc() if self.debug else
+                                          "%s: Error reading item: %s | %s" %
+                                          (type(e).__name__, i.title().split(), e)) + Fore.RESET)
                         continue
 
     def read_infusions(self):
@@ -318,7 +327,9 @@ class DarkSouls(DSProcess):
                 infusion = DSInfusion(i.strip())
                 self.infusions[infusion.get_name()] = infusion
             except Exception as e:
-                print("%s: Error reading infusion: %s | %s" % (type(e).__name__, i.split(), e))
+                print(Fore.RED + (format_exc() if self.debug else
+                                  "%s: Error reading infusion: %s | %s" %
+                                  (type(e).__name__, i.split(), e)) + Fore.RESET)
 
     def read_covenants(self):
         from dsres.ds_resources import get_covenants
@@ -330,7 +341,9 @@ class DarkSouls(DSProcess):
                 cov_name = covenant[1]
                 self.covenants[cov_name] = cov_id
             except Exception as e:
-                print("%s: Error reading covenant: %s | %s" % (type(e).__name__, c.split(), e))
+                print(Fore.RED + (format_exc() if self.debug else
+                                  "%s: Error reading covenant: %s | %s" %
+                                  (type(e).__name__, c.split(), e)) + Fore.RESET)
 
     @staticmethod
     def read_static_func():
@@ -338,7 +351,6 @@ class DarkSouls(DSProcess):
             static_func = load(open(DarkSouls.STATIC_SOURCE, "rb"))
             DarkSouls.STATIC_FUNC.update(static_func)
         except (FileNotFoundError, UnpicklingError, EOFError) as e:
-            print(e)
             open(DarkSouls.STATIC_SOURCE, "w+")
             DarkSouls.STATIC_FUNC.clear()
 

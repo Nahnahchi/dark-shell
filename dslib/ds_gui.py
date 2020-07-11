@@ -5,6 +5,8 @@ from threading import Thread
 from time import sleep
 from pickle import dump, load, UnpicklingError
 from os.path import join
+from traceback import format_exc
+from colorama import Fore
 
 
 class DSGraphicsGUI(Tk):
@@ -24,7 +26,7 @@ class DSGraphicsGUI(Tk):
         "hue": 0.000
     }
 
-    def __init__(self, process: DSProcess):
+    def __init__(self, process: DSProcess, debug=False):
 
         super(DSGraphicsGUI, self).__init__()
 
@@ -32,6 +34,8 @@ class DSGraphicsGUI(Tk):
             saved = load(open(DSGraphicsGUI.SAVE_FILE, "rb"))
         except (UnpicklingError, FileNotFoundError, EOFError):
             saved = DSGraphicsGUI.SAVED_DATA
+            if debug:
+                print(Fore.RED + format_exc() + Fore.RESET)
 
         self.process = process
 

@@ -3,6 +3,8 @@ from dsres.ds_offsets import DSOffsets, Index
 from dsres.ds_asm import Scripts
 from ctypes import ArgumentError
 from math import pi
+from colorama import Fore
+from traceback import format_exc
 # noinspection PyUnresolvedReferences
 from dsprh.ds_imports import DSHook, Kernel32, FasmNet
 # noinspection PyUnresolvedReferences
@@ -98,8 +100,9 @@ class DSProcess:
         "181": 17
     }
 
-    def __init__(self, process_name):
+    def __init__(self, process_name, debug=False):
         self.hook = DSHook(self, 5000, 5000, process_name)
+        self.debug=debug
         self.version = None
         self.pointers = {}
         self.is_hooked = lambda: self.hook.Hooked
@@ -118,12 +121,15 @@ class DSProcess:
             version = self.pointers[Index.CHECK_VERSION].ReadUInt32(0)
             self.set_version(DSProcess.GAME_VERSIONS[version] if version is not None else None)
         except KeyError:
+            if self.debug:
+                print(Fore.RED + format_exc() + Fore.RESET)
             self.set_version("Unknown")
         finally:
             try:
                 getattr(self, "update_version")()
             except AttributeError:
-                pass
+                if self.debug:
+                    print(Fore.RED + format_exc() + Fore.RESET)
 
     def scan_aob(self):
 

@@ -9,23 +9,26 @@ from threading import Thread
 from os import system, _exit
 from _version import __version__, check_for_updates, CheckUpdatesError
 from sys import argv
-from traceback import print_exc
-import colored_traceback.always
+from traceback import format_exc
+from colorama import Fore, init
 
-
-DEBUG = False
+_DEBUG = False
+_FLAGS = {
+    "help": ("-h", "--help"),
+    "debug": ("-d", "--debug")
+}
 
 
 class DarkShell(DSCmd):
 
     def __init__(self):
-        super(DarkShell, self).__init__()
+        super(DarkShell, self).__init__(_DEBUG)
         nest_add([DSItem(item.strip(), -1).get_name() for item in read_mod_items()])
         self.set_nested_completer(DS_NEST)
-        self.game = DarkSouls()
-        Thread(target=self.execute_static_commands).start()
+        self.game = DarkSouls(_DEBUG)
+        Thread(target=self._execute_static_commands).start()
 
-    def execute_static_commands(self):
+    def _execute_static_commands(self):
         execute = True
         while True:
             if execute:
@@ -37,7 +40,7 @@ class DarkShell(DSCmd):
                         for func in static_commands.keys():
                             self.game.switch(command=func[0], arguments=static_commands[func])
                     except Exception as e:
-                        print("%s: %s" % (type(e).__name__, e))
+                        print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
                     execute = False
             if not self.game.is_loaded():
                 execute = True
@@ -82,7 +85,7 @@ class DarkShell(DSCmd):
         try:
             DSPositionGUI(process=self.game).mainloop()
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_graphics_gui():
@@ -92,7 +95,7 @@ class DarkShell(DSCmd):
         try:
             DSGraphicsGUI(process=self.game).mainloop()
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_set():
@@ -106,7 +109,7 @@ class DarkShell(DSCmd):
         try:
             self.game.switch(command="set", arguments=args)
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_enable():
@@ -120,7 +123,7 @@ class DarkShell(DSCmd):
         try:
             self.game.switch(command="enable", arguments=args+[True])
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_disable():
@@ -134,7 +137,7 @@ class DarkShell(DSCmd):
         try:
             self.game.switch(command="enable", arguments=args+[False])
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_get():
@@ -148,7 +151,7 @@ class DarkShell(DSCmd):
         try:
             self.game.switch(command="get", arguments=args)
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_game_restart():
@@ -159,7 +162,7 @@ class DarkShell(DSCmd):
             if self.game.game_restart():
                 print("Game restarted")
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_menu_kick():
@@ -182,7 +185,7 @@ class DarkShell(DSCmd):
             if i_count > 0:
                 self.game.create_item(i_name, i_count, func=self.game.item_drop)
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_item_get():
@@ -198,7 +201,7 @@ class DarkShell(DSCmd):
             if i_count > 0:
                 self.game.create_item(i_name, i_count, func=self.game.item_get)
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_item_mod():
@@ -213,7 +216,7 @@ class DarkShell(DSCmd):
                 self.set_nested_completer(DS_NEST)
                 Thread(target=self.game.read_items).start()
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_item_get_upgrade():
@@ -225,7 +228,7 @@ class DarkShell(DSCmd):
             if i_count > 0:
                 self.game.upgrade_item(i_name, i_count)
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_warp():
@@ -243,13 +246,12 @@ class DarkShell(DSCmd):
     def do_warp(self, args):
         try:
             if args[0] == "bonfire":
-                if not self.game.bonfire_warp():
-                    print("Failed to warp | Memory couldn't be written")
+                self.game.bonfire_warp()
             else:
                 b_name = " ".join(args[0:])
                 self.game.bonfire_warp_by_name(b_name)
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_unlock_all_gestures():
@@ -260,22 +262,40 @@ class DarkShell(DSCmd):
             if self.game.unlock_all_gestures():
                 print("All gestures unlocked")
         except Exception as e:
-            print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
+
+
+def has_flag(key: str):
+    for arg in argv:
+        if arg in _FLAGS[key]:
+            return True
+    return False
 
 
 if __name__ == "__main__":
-    print("Loading...")
-    if len(argv) > 1 and argv[1] in ("-d", "--debug"):
-        DEBUG = True
+    init()
+    if len(argv) > 1:
+        if has_flag("debug"):
+            _DEBUG = True
+        if has_flag("help"):
+            print(Fore.LIGHTYELLOW_EX + "Available options:")
+            for f in _FLAGS.values():
+                print("\t%s" % str(f))
+            exit()
+    print(Fore.LIGHTYELLOW_EX + "Loading..." + Fore.RESET)
     set_title("DarkShell")
     try:
         is_latest, version = check_for_updates()
         DarkShell.do_clear(args=[])
-    except CheckUpdatesError as e:
-        if DEBUG:
-            print_exc()
+    except CheckUpdatesError:
+        if _DEBUG:
+            print(Fore.RED + format_exc() + Fore.RESET)
         is_latest, version = True, __version__
-    print("Welcome to DarkShell %s%s" % (
-        "v" + __version__, (" (v%s is available)" % version) if not is_latest else ""
+    print(Fore.LIGHTBLUE_EX + "Welcome to DarkShell %s%s" % (
+        "v" + __version__, (" (v%s is available)" % version) if not is_latest else "" + Fore.RESET
     ))
-    DarkShell().cmd_loop()
+    try:
+        DarkShell().cmd_loop()
+    except Exception as e:
+        print(Fore.RED + (format_exc() if _DEBUG else "[FATAL] %s: %s" % (type(e).__name__, e)) + Fore.RESET)
+        input()

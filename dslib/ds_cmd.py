@@ -1,6 +1,8 @@
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.shortcuts import prompt
+from traceback import format_exc
+from colorama import Fore
 
 
 class DSParser:
@@ -23,7 +25,8 @@ class DSCmd:
     help_prefix = "help_"
     prompt_prefix = "~ "
     
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
         self.completer = None
         self.history = InMemoryHistory()
 
@@ -48,7 +51,8 @@ class DSCmd:
                 arguments = parser.get_arguments()
                 self.execute_command(command, arguments)
             except KeyboardInterrupt:
-                pass
+                if self.debug:
+                    print(Fore.RED + format_exc() + Fore.RESET)
 
     def execute_command(self, command, arguments):
         try:
@@ -58,27 +62,14 @@ class DSCmd:
                         name=command if command.strip() else "default")
                     )(arguments)
         except AttributeError as e:
-            print("%s: %s" % (type(e).__name__, e))
-
-    def execute_source(self, source):
-        if source is not None:
-            try:
-                commands = open(source, "r").readlines()
-                for command in commands:
-                    parser = DSParser(command)
-                    self.execute_command(
-                        command=parser.get_command(),
-                        arguments=parser.get_arguments()
-                    )
-            except (PermissionError, FileNotFoundError, EOFError) as e:
-                print("%s: %s" % (type(e).__name__, e))
+            print(Fore.RED + (format_exc() if self.debug else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     def do_help(self, args):
         if len(args) > 0:
             try:
                 getattr(self, DSCmd.get_method_name(prefix=DSCmd.help_prefix, name=args[0]))()
             except AttributeError as e:
-                print("%s: %s" % (type(e).__name__, e))
+                print(Fore.RED + (format_exc() if self.debug else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
         else:
             commands = []
             for name in dir(self.__class__):
@@ -94,4 +85,5 @@ class DSCmd:
             print("\n")
 
     def do_default(self, args):
-        pass
+        if self.debug:
+            print(Fore.BLUE + "default" + Fore.RESET)
