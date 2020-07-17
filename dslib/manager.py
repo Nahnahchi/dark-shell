@@ -71,12 +71,12 @@ class DarkSouls(DSProcess):
                     raise ArgumentError("Item name not specified!")
             elif args[0] == "list":
                 from dsres.resources import read_mod_items
-                print("\n\tID\t\tName")
+                print(Fore.LIGHTBLUE_EX + "\n\tID\t\tName" + Fore.LIGHTYELLOW_EX)
                 for item in read_mod_items():
                     item = item.split()
                     if len(item) == 4:
                         print("\t%s\t\t%s" % (item[0], DarkSouls.get_name_from_arg(item[3])))
-                print("\n")
+                print(Fore.RESET)
             elif args[0] == "add":
                 from dsres.resources import create_mod_files
                 create_mod_files(DarkSouls.ITEM_CATEGORIES)

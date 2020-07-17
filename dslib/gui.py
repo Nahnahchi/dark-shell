@@ -1,6 +1,6 @@
 from dslib.process import DSProcess
 from dsres.resources import SAVE_DIR
-from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton, LabelFrame
+from mttkinter.mtTkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton, LabelFrame
 from threading import Thread
 from time import sleep
 from pickle import dump, load, UnpicklingError
@@ -30,11 +30,13 @@ class DSGraphicsGUI(Tk):
 
         super(DSGraphicsGUI, self).__init__()
 
+        self._debug = debug
+
         try:
             saved = load(open(DSGraphicsGUI.SAVE_FILE, "rb"))
         except (UnpicklingError, FileNotFoundError, EOFError):
             saved = DSGraphicsGUI.SAVED_DATA
-            if debug:
+            if self._debug:
                 print(Fore.RED + format_exc() + Fore.RESET)
 
         self.process = process
@@ -95,32 +97,32 @@ class DSGraphicsGUI(Tk):
         Checkbutton(render, text="NormalDraw_Trans", var=self.normal_draw_trans,
                     command=self.set_draw_trans).grid(row=5, column=1, sticky="W")
 
-        debug = LabelFrame(self, text="Debug")
-        debug.pack(fill="both")
+        _debug = LabelFrame(self, text="Debug")
+        _debug.pack(fill="both")
 
         self.large_compass = BooleanVar()
         self.large_compass.set(False)
-        Checkbutton(debug, text="Large Compass", var=self.large_compass,
+        Checkbutton(_debug, text="Large Compass", var=self.large_compass,
                     command=self.set_draw_compass_large).grid(row=0, column=0, sticky="W")
 
         self.small_compass = BooleanVar()
         self.small_compass.set(False)
-        Checkbutton(debug, text="Small Compass", var=self.small_compass,
+        Checkbutton(_debug, text="Small Compass", var=self.small_compass,
                     command=self.set_draw_compass_small).grid(row=1, column=0, sticky="W")
 
         self.altimeter = BooleanVar()
         self.altimeter.set(False)
-        Checkbutton(debug, text="Altimeter", var=self.altimeter,
+        Checkbutton(_debug, text="Altimeter", var=self.altimeter,
                     command=self.set_draw_altimeter).grid(row=2, column=0, sticky="W")
 
         self.node_graph = BooleanVar()
         self.node_graph.set(False)
-        Checkbutton(debug, text="Node Graph", var=self.node_graph,
+        Checkbutton(_debug, text="Node Graph", var=self.node_graph,
                     command=self.set_draw_node_graph).grid(row=0, column=1, sticky="W")
 
         self.bounding_boxes = BooleanVar()
         self.bounding_boxes.set(False)
-        Checkbutton(debug, text="Bounding Boxes", var=self.bounding_boxes,
+        Checkbutton(_debug, text="Bounding Boxes", var=self.bounding_boxes,
                     command=self.set_draw_bounding_boxes).grid(row=1, column=1, sticky="W")
 
         filter_ = LabelFrame(self, text="Filter")
@@ -201,18 +203,20 @@ class DSGraphicsGUI(Tk):
             self.set_override_filter()
 
     def save_state(self):
-        DSGraphicsGUI.SAVED_DATA["override f"] = self.override_filter.get()
-        DSGraphicsGUI.SAVED_DATA["sync br"] = self.sync_brightness.get()
-        DSGraphicsGUI.SAVED_DATA["sync co"] = self.sync_contrast.get()
-        DSGraphicsGUI.SAVED_DATA["brightness r"] = self.brightness_r.get()
-        DSGraphicsGUI.SAVED_DATA["contrast r"] = self.contrast_r.get()
-        DSGraphicsGUI.SAVED_DATA["brightness g"] = self.brightness_g.get()
-        DSGraphicsGUI.SAVED_DATA["contrast g"] = self.contrast_g.get()
-        DSGraphicsGUI.SAVED_DATA["brightness b"] = self.brightness_b.get()
-        DSGraphicsGUI.SAVED_DATA["contrast b"] = self.contrast_b.get()
-        DSGraphicsGUI.SAVED_DATA["saturation"] = self.saturation.get()
-        DSGraphicsGUI.SAVED_DATA["hue"] = self.hue.get()
-        dump(DSGraphicsGUI.SAVED_DATA, open(DSGraphicsGUI.SAVE_FILE, "wb"))
+        current_state = DSGraphicsGUI.SAVED_DATA
+        save_file = DSGraphicsGUI.SAVE_FILE
+        current_state["override f"] = self.override_filter.get()
+        current_state["sync br"] = self.sync_brightness.get()
+        current_state["sync co"] = self.sync_contrast.get()
+        current_state["brightness r"] = self.brightness_r.get()
+        current_state["contrast r"] = self.contrast_r.get()
+        current_state["brightness g"] = self.brightness_g.get()
+        current_state["contrast g"] = self.contrast_g.get()
+        current_state["brightness b"] = self.brightness_b.get()
+        current_state["contrast b"] = self.contrast_b.get()
+        current_state["saturation"] = self.saturation.get()
+        current_state["hue"] = self.hue.get()
+        dump(current_state, open(save_file, "wb"))
 
     def set_override_filter(self):
         self.process.override_filter(self.override_filter.get())
@@ -345,10 +349,11 @@ class DSGraphicsGUI(Tk):
 
 class DSPositionGUI(Tk):
 
-    def __init__(self, process: DSProcess):
+    def __init__(self, process: DSProcess, debug=False):
 
         super(DSPositionGUI, self).__init__()
 
+        self._debug = debug
         self.process = process
         self.exit_flag = False
 
@@ -415,20 +420,24 @@ class DSPositionGUI(Tk):
         Thread(target=self.update).start()
 
     def update(self):
+        x, y, z, a = 0, 1, 2, 3
         while not self.exit_flag:
-            pos_current = self.process.get_pos()
-            pos_stable = self.process.get_pos_stable()
-            self.x_current.set("%.3f" % pos_current[0])
-            self.x_stable.set("%.3f" % pos_stable[0])
-            self.y_current.set("%.3f" % pos_current[1])
-            self.y_stable.set("%.3f" % pos_stable[1])
-            self.z_current.set("%.3f" % pos_current[2])
-            self.z_stable.set("%.3f" % pos_stable[2])
-            self.a_current.set("%.3f" % pos_current[3])
-            self.a_stable.set("%.3f" % pos_stable[3])
-            self.world.set(self.process.get_world())
-            self.area.set(self.process.get_area())
-            sleep(0.1)
+            try:
+                pos_current = self.process.get_pos()
+                pos_stable = self.process.get_pos_stable()
+                self.x_current.set("%.3f" % pos_current[x])
+                self.x_stable.set("%.3f" % pos_stable[x])
+                self.y_current.set("%.3f" % pos_current[y])
+                self.y_stable.set("%.3f" % pos_stable[y])
+                self.z_current.set("%.3f" % pos_current[z])
+                self.z_stable.set("%.3f" % pos_stable[z])
+                self.a_current.set("%.3f" % pos_current[a])
+                self.a_stable.set("%.3f" % pos_stable[a])
+            except RuntimeError:
+                if self._debug:
+                    print(Fore.RED + format_exc() + Fore.RESET)
+            finally:
+                sleep(0.016)
 
     def freeze(self):
         self.process.lock_pos(self.lock_pos.get())
