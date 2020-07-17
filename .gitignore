@@ -1,5 +1,6 @@
 static
 graphics
+pyinstaller_hooks
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

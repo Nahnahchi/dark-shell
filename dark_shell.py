@@ -206,7 +206,7 @@ class DarkShell(DSCmd):
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
-    def help_menu_kick():
+    def help_force_menu():
         pass
 
     def do_force_menu(self, args):
@@ -335,8 +335,6 @@ if __name__ == "__main__":
             print("\t%s" % str(f))
         exit()
     print(Fore.LIGHTYELLOW_EX + "Loading..." + Fore.RESET)
-    if not _DEBUG:
-        DarkShell.do_clear(args=[])
     set_title("DarkShell")
     try:
         if _DEBUG:
@@ -346,6 +344,8 @@ if __name__ == "__main__":
         if _DEBUG:
             print(Fore.LIGHTYELLOW_EX + str(ex) + Fore.RESET)
         is_latest, version = True, __version__
+    if not _DEBUG:
+        DarkShell.do_clear(args=[])
     print(Fore.LIGHTBLUE_EX + "Welcome to DarkShell %s%s" % (
         "v" + __version__, (" (v%s is available)" % version) if not is_latest else "" + Fore.RESET))
     try:

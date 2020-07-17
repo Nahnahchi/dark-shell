@@ -285,8 +285,6 @@ class DSProcess:
         return result
 
     def menu_kick(self):
-        if not self.is_hooked():
-            raise ReadMemoryError()
         return self.pointers[Index.UNKNOWN_C].WriteInt32(DSOffsets.UnknownC.MENU_KICK, 2)
 
     def set_phantom_type(self, value: int):
