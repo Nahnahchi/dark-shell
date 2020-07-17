@@ -912,8 +912,6 @@ DS_BOOL = {
 DS_NEST = {
     "clear": None,
     "exit": None,
-    "quit": None,
-    "end": None,
     "set": {
         "vit": None,
         "atn": None,
@@ -925,7 +923,7 @@ DS_NEST = {
         "fth": None,
         "sls": None,
         "hum": None,
-        "speed-game": None,
+        "speed-self": None,
         "phantom-type": None,
         "team-type": None,
         "ng": None,
@@ -945,6 +943,7 @@ DS_NEST = {
     },
     "get": {
         "status": None,
+        "last-animation": None
     },
     "enable": DS_BOOL,
     "disable": DS_BOOL,
@@ -959,9 +958,32 @@ DS_NEST = {
     },
     "unlock-all-gestures": None,
     "game-restart": None,
-    "menu-kick": None,
+    "force-menu": None,
+    "on-flag": {
+        "notify": None,
+        "item-get": None
+    },
     "pos-gui": None,
     "graphics-gui": None,
+    "meta": {
+        "info": None,
+        "changelog": None,
+        "processes": {
+            "clear": {
+                "static": None,
+                "waiting": None
+            },
+            "list": None
+        },
+        "open": {
+            "appdata": None,
+            "cwd": None,
+            "github": None
+        },
+        "test": {
+            "audio": None
+        }
+    },
     "warp": {
         "bonfire": None,
         "abyss": {
@@ -1123,6 +1145,7 @@ def nest_update():
     DS_NEST["item-get"] = get_all_items()
     DS_NEST["item-drop"] = get_all_items()
     DS_NEST["item-get-upgrade"] = get_upgradable_items()
+    DS_NEST["on-flag"]["item-get"] = get_all_items()
 
 
 nest_update()

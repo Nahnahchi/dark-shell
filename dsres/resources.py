@@ -1,5 +1,7 @@
+from simpleaudio import WaveObject
+from random import choice
 from os.path import join, isfile, exists, isdir
-from os import listdir, getcwd, getenv, makedirs
+from os import listdir, getcwd, getenv, makedirs, startfile
 import sys
 
 APPDATA = join(getenv("APPDATA"), "DarkShell")
@@ -15,6 +17,31 @@ try:
     makedirs(MOD_DIR)
 except FileExistsError:
     pass
+
+
+def play_random_sound():
+    WaveObject.from_wave_file(join(get_sound_dir(), choice(get_sound_files()))).play()
+
+
+def open_resource(args: list):
+    if "appdata" in args:
+        startfile(APPDATA)
+    if "cwd" in args:
+        startfile(RES_DIR)
+    if "github" in args:
+        import webbrowser
+        from _version import __github__
+        webbrowser.open(__github__)
+
+
+def get_sound_files():
+    sound_dir = get_sound_dir()
+    sound_files = [f for f in listdir(sound_dir) if isfile(join(sound_dir, f))]
+    return sound_files
+
+
+def get_sound_dir():
+    return join(RES_DIR, "sound")
 
 
 def get_item_dir():
@@ -110,3 +137,7 @@ def get_infusions():
 
 def get_covenants():
     return open("%s/covenants.txt" % join(RES_DIR, "misc"), "r").readlines()
+
+
+def get_banners():
+    return open("%s/banners.txt" % join(RES_DIR, "misc"), "r").readlines()

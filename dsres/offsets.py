@@ -16,7 +16,8 @@ class Index(Enum):
     COMPASS_LARGE = auto()
     DRAW_MAP = auto()
     CHAR_DATA_A = auto()
-    ANIM_DATA = auto()
+    ANIM_DATA_A = auto()
+    ANIM_DATA_B = auto()
     CHAR_POS_DATA = auto()
     CHAR_MAP_DATA = auto()
     CHAR_DATA_B = auto()
@@ -140,7 +141,7 @@ class DSOffsets:
         PLAY_SPEED = 0x64
 
     class CharMapData:
-        ANIM_DATA_POINTER = 0x14
+        ANIM_DATA_POINTER_A = 0x14
         CHAR_POS_DATA_POINTER = 0x1C
         CHAR_MAP_FLAGS = 0xC4
         WARP = 0xC8
@@ -332,6 +333,16 @@ class DSOffsets:
 
     class UnknownD:
         STORED_MAGIC = 0x1D4
+
+    UNKNOWN_AOB_E = "8B 76 0C 89 35 ? ? ? ? 33 C0 8D 72 9C 57 89 44 24 08 83 FE 14"
+    UNKNOWN_AOB_OFFSET_E1 = 5
+    UNKNOWN_AOB_OFFSET_E2 = 0
+    UNKNOWN_OFFSET_E1 = 0x10
+    UNKNOWN_OFFSET_E2 = 0x38
+    UNKNOWN_OFFSET_E3 = 0x46C
+
+    class UnknownE:
+        LAST_ANIMATION = 0x60
 
     class Gestures:
         POINT_FORWARD = 0x8

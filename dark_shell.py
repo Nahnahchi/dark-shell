@@ -1,14 +1,15 @@
-from dslib.ds_gui import DSPositionGUI, DSGraphicsGUI
-from dslib.ds_cmd import DSCmd
-from dsres.ds_commands import DS_NEST, nest_add
-from dsres.ds_resources import read_mod_items
-from dslib.ds_wrapper import DarkSouls
-from dsobj.ds_item import DSItem
+from dslib.gui import DSPositionGUI, DSGraphicsGUI
+from dslib.cmd import DSCmd
+from dslib.process import wait_for
+from dsres.commands import DS_NEST, nest_add
+from dsres.resources import read_mod_items
+from dslib.manager import DarkSouls
+from dsobj.item import DSItem
 from prompt_toolkit.shortcuts import set_title
-from threading import Thread
+from threading import Thread, Event
 from os import system, _exit
-from _version import __version__, check_for_updates, CheckUpdatesError
-from sys import argv
+from _version import __version__, check_for_updates, MetaError
+from sys import argv, _getframe
 from traceback import format_exc
 from colorama import Fore, init
 
@@ -23,27 +24,46 @@ class DarkShell(DSCmd):
 
     def __init__(self):
         super(DarkShell, self).__init__(_DEBUG)
+        sync_evt = Event()
         nest_add([DSItem(item.strip(), -1).get_name() for item in read_mod_items()])
         self.set_nested_completer(DS_NEST)
-        self.game = DarkSouls(_DEBUG)
-        Thread(target=self._execute_static_commands).start()
+        self.game_man = DarkSouls(_DEBUG)
+        Thread(target=self._execute_static_commands, args=(sync_evt,)).start()
+        Thread(target=self._execute_waiting_commands, args=(sync_evt,)).start()
+        Thread(target=self.game_man.load_saved_func, args=(sync_evt,)).start()
 
-    def _execute_static_commands(self):
-        execute = True
+    def _execute_static_commands(self, sync_execute: Event):
+        sync_execute.wait()
         while True:
-            if execute:
-                if not self.game.is_loaded():
-                    continue
-                else:
-                    try:
-                        static_commands = DarkSouls.STATIC_FUNC.copy()
-                        for func in static_commands.keys():
-                            self.game.switch(command=func[0], arguments=static_commands[func])
-                    except Exception as e:
-                        print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
-                    execute = False
-            if not self.game.is_loaded():
-                execute = True
+            wait_for(self.game_man.is_loaded)
+            static_commands = DarkSouls.STATIC_FUNC.copy()
+            for func, args in static_commands.items():
+                try:
+                    self.game_man.switch(command=func[0], arguments=args)
+                except Exception as e:
+                    print(Fore.RED + (format_exc() if _DEBUG else "%s in '%s' — %s" % (
+                        type(e).__name__, _getframe().f_code.co_name, e)) + Fore.RESET)
+            wait_for(self.game_man.is_loaded, desired_state=False)
+
+    def _execute_waiting_commands(self, sync_execute: Event):
+        sync_execute.wait()
+        waiting_commands = DarkSouls.WAITING_FUNC.copy()
+        for evt_hash, entry in waiting_commands.items():
+            try:
+                event = Event()
+                flag_id = entry["val"][0]
+                flag_state = entry["val"][1]
+                command = entry["arg"][0]
+                args = entry["arg"][1:]
+                Thread(target=self.game_man.start_listen, args=(evt_hash, flag_id, flag_state, event)).start()
+                Thread(target=self._delay_command, args=(command, args, event)).start()
+            except Exception as e:
+                print(Fore.RED + (format_exc() if _DEBUG else "%s in '%s' — %s" % (
+                    type(e).__name__, _getframe().f_code.co_name, e)) + Fore.RESET)
+
+    def _delay_command(self, command: str, args: list, evt: Event):
+        evt.wait()
+        self.execute_command(command, args)
 
     @staticmethod
     def help_clear():
@@ -62,20 +82,41 @@ class DarkShell(DSCmd):
         _exit(0)
 
     @staticmethod
-    def help_quit():
-        pass
+    def help_meta():
+        print(Fore.LIGHTBLUE_EX + "\nUsage:" + Fore.LIGHTYELLOW_EX + "\tmeta [option [option]]")
+        print(Fore.LIGHTBLUE_EX + "\nOptions:" + Fore.LIGHTYELLOW_EX)
+        for com in DS_NEST["meta"].keys():
+            if DS_NEST["meta"][com] is not None:
+                opts = " [ "
+                for opt in DS_NEST["meta"][com].keys():
+                    opts += opt + " "
+                com += opts + "]"
+            print("\t%s" % com)
+        print(Fore.RESET)
+
+    def do_meta(self, args):
+        try:
+            self.game_man.switch(command="meta", arguments=args)
+        except Exception as e:
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
-    def do_quit(args):
-        _exit(0)
+    def help_on_flag():
+        print(Fore.LIGHTBLUE_EX + "\nUsage:" + Fore.LIGHTYELLOW_EX + "\ton-flag [option [option]]")
+        print(Fore.LIGHTBLUE_EX + "\nOptions:" + Fore.LIGHTYELLOW_EX)
+        for opt in DS_NEST["on-flag"].keys():
+            print("\t%s" % opt)
+        print(Fore.RESET)
 
-    @staticmethod
-    def help_end():
-        pass
-
-    @staticmethod
-    def do_end(args):
-        _exit(0)
+    def do_on_flag(self, args):
+        try:
+            wait_evt = Event()
+            self.game_man.switch(command="on-flag", arguments=["notify", wait_evt])
+            Thread(target=self._delay_command, args=(args[0], args[1:], wait_evt)).start()
+            DarkSouls.WAITING_FUNC[hash(wait_evt)].update({"arg": args})
+            self.game_man.save_func()
+        except Exception as e:
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
     @staticmethod
     def help_pos_gui():
@@ -83,7 +124,7 @@ class DarkShell(DSCmd):
 
     def do_pos_gui(self, args):
         try:
-            DSPositionGUI(process=self.game).mainloop()
+            DSPositionGUI(process=self.game_man).mainloop()
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -93,7 +134,7 @@ class DarkShell(DSCmd):
 
     def do_graphics_gui(self, args):
         try:
-            DSGraphicsGUI(process=self.game).mainloop()
+            DSGraphicsGUI(process=self.game_man).mainloop()
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -107,7 +148,7 @@ class DarkShell(DSCmd):
 
     def do_set(self, args):
         try:
-            self.game.switch(command="set", arguments=args)
+            self.game_man.switch(command="set", arguments=args)
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -121,7 +162,7 @@ class DarkShell(DSCmd):
 
     def do_enable(self, args):
         try:
-            self.game.switch(command="enable", arguments=args+[True])
+            self.game_man.switch(command="enable", arguments=args + [True])
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -135,7 +176,7 @@ class DarkShell(DSCmd):
 
     def do_disable(self, args):
         try:
-            self.game.switch(command="enable", arguments=args+[False])
+            self.game_man.switch(command="enable", arguments=args + [False])
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -149,7 +190,7 @@ class DarkShell(DSCmd):
 
     def do_get(self, args):
         try:
-            self.game.switch(command="get", arguments=args)
+            self.game_man.switch(command="get", arguments=args)
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -159,7 +200,7 @@ class DarkShell(DSCmd):
 
     def do_game_restart(self, args):
         try:
-            if self.game.game_restart():
+            if self.game_man.game_restart():
                 print("Game restarted")
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
@@ -168,8 +209,8 @@ class DarkShell(DSCmd):
     def help_menu_kick():
         pass
 
-    def do_menu_kick(self, args):
-        self.game.menu_kick()
+    def do_force_menu(self, args):
+        self.game_man.menu_kick()
 
     @staticmethod
     def help_item_drop():
@@ -179,11 +220,11 @@ class DarkShell(DSCmd):
     def do_item_drop(self, args):
         try:
             if len(args) > 0 and args[0] in DarkSouls.ITEM_CATEGORIES:
-                DarkSouls.create_custom_item(args, func=self.game.item_drop)
+                DarkSouls.create_custom_item(args, func=self.game_man.item_drop)
                 return
             i_name, i_count = DarkSouls.get_item_name_and_count(args)
             if i_count > 0:
-                self.game.create_item(i_name, i_count, func=self.game.item_drop)
+                self.game_man.create_item(i_name, i_count, func=self.game_man.item_drop)
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -195,11 +236,11 @@ class DarkShell(DSCmd):
     def do_item_get(self, args):
         try:
             if len(args) > 0 and args[0] in DarkSouls.ITEM_CATEGORIES:
-                DarkSouls.create_custom_item(args, func=self.game.item_get)
+                DarkSouls.create_custom_item(args, func=self.game_man.item_get)
                 return
             i_name, i_count = DarkSouls.get_item_name_and_count(args)
             if i_count > 0:
-                self.game.create_item(i_name, i_count, func=self.game.item_get)
+                self.game_man.create_item(i_name, i_count, func=self.game_man.item_get)
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -214,7 +255,7 @@ class DarkShell(DSCmd):
         try:
             if DarkSouls.add_new_item(args):
                 self.set_nested_completer(DS_NEST)
-                Thread(target=self.game.read_items).start()
+                Thread(target=self.game_man.read_items).start()
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -226,7 +267,7 @@ class DarkShell(DSCmd):
         try:
             i_name, i_count = DarkSouls.get_item_name_and_count(args)
             if i_count > 0:
-                self.game.upgrade_item(i_name, i_count)
+                self.game_man.upgrade_item(i_name, i_count)
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -245,11 +286,23 @@ class DarkShell(DSCmd):
 
     def do_warp(self, args):
         try:
+            if len(args) == 0:
+                DarkSouls.raise_warp_error("")
             if args[0] == "bonfire":
-                self.game.bonfire_warp()
+                self.game_man.bonfire_warp()
             else:
                 b_name = " ".join(args[0:])
-                self.game.bonfire_warp_by_name(b_name)
+                self.game_man.bonfire_warp_by_name(b_name)
+        except Exception as e:
+            print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
+
+    @staticmethod
+    def help_notify():
+        pass
+
+    def do_notify(self, args):
+        try:
+            Thread(target=self.game_man.notify).start()
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 
@@ -259,7 +312,7 @@ class DarkShell(DSCmd):
 
     def do_unlock_all_gestures(self, args):
         try:
-            if self.game.unlock_all_gestures():
+            if self.game_man.unlock_all_gestures():
                 print("All gestures unlocked")
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
@@ -274,28 +327,30 @@ def has_flag(key: str):
 
 if __name__ == "__main__":
     init()
-    if len(argv) > 1:
-        if has_flag("debug"):
-            _DEBUG = True
-        if has_flag("help"):
-            print(Fore.LIGHTYELLOW_EX + "Available options:")
-            for f in _FLAGS.values():
-                print("\t%s" % str(f))
-            exit()
+    if has_flag("debug"):
+        _DEBUG = True
+    if has_flag("help"):
+        print(Fore.LIGHTBLUE_EX + "Available options:" + Fore.LIGHTYELLOW_EX)
+        for f in _FLAGS.values():
+            print("\t%s" % str(f))
+        exit()
     print(Fore.LIGHTYELLOW_EX + "Loading..." + Fore.RESET)
+    if not _DEBUG:
+        DarkShell.do_clear(args=[])
     set_title("DarkShell")
     try:
-        is_latest, version = check_for_updates()
-        DarkShell.do_clear(args=[])
-    except CheckUpdatesError:
         if _DEBUG:
-            print(Fore.RED + format_exc() + Fore.RESET)
+            raise MetaError(reason="Skipping the update check", message="Debug State")
+        is_latest, version = check_for_updates()
+    except MetaError as ex:
+        if _DEBUG:
+            print(Fore.LIGHTYELLOW_EX + str(ex) + Fore.RESET)
         is_latest, version = True, __version__
     print(Fore.LIGHTBLUE_EX + "Welcome to DarkShell %s%s" % (
-        "v" + __version__, (" (v%s is available)" % version) if not is_latest else "" + Fore.RESET
-    ))
+        "v" + __version__, (" (v%s is available)" % version) if not is_latest else "" + Fore.RESET))
     try:
         DarkShell().cmd_loop()
     except Exception as ex:
-        print(Fore.RED + (format_exc() if _DEBUG else "[FATAL] %s: %s" % (type(ex).__name__, ex)) + Fore.RESET)
+        print(Fore.RED + (format_exc() if _DEBUG else "FATAL | %s: %s" % (type(ex).__name__, ex)) + Fore.RESET)
         input()
+        _exit(1)

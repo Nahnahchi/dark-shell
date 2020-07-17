@@ -1,16 +1,26 @@
 from enum import Enum
-from dsres.ds_offsets import DSOffsets, Index
-from dsres.ds_asm import Scripts
+from dsres.offsets import DSOffsets, Index
+from dsres.asm import Scripts
 from ctypes import ArgumentError
 from math import pi
 from colorama import Fore
 from traceback import format_exc
+from time import sleep
 # noinspection PyUnresolvedReferences
-from dsprh.ds_imports import DSHook, Kernel32, FasmNet
+from dsbin.imports import DSHook, Kernel32, FasmNet
 # noinspection PyUnresolvedReferences
 from System import IntPtr, Int32
 # noinspection PyUnresolvedReferences
 from System.Text import Encoding
+
+
+def wait_for(predicate, desired_state=True, single_frame=0.016):
+    if not callable(predicate):
+        return False
+    else:
+        while predicate() != desired_state:
+            sleep(single_frame)
+        return True
 
 
 def ptr(offset: int):
@@ -58,7 +68,7 @@ class Stats(Enum):
     RES = "res"
     INT = "int"
     FTH = "fth"
-    SLV = "slv"
+    LVL = "slv"
     SLS = "sls"
     HUM = "hum"
 
@@ -101,13 +111,13 @@ class DSProcess:
     }
 
     def __init__(self, process_name, debug=False):
-        self.hook = DSHook(self, 5000, 5000, process_name)
-        self.debug=debug
+        self._hook = DSHook(self, 5000, 5000, process_name)
+        self._debug = debug
         self.version = None
         self.pointers = {}
-        self.is_hooked = lambda: self.hook.Hooked
+        self.is_hooked = lambda: self._hook.Hooked
         self.is_loaded = lambda: self.pointers[Index.CHR_FOLLOW_CAM].Resolve() != IntPtr.Zero
-        self.hook.Start()
+        self._hook.Start()
         self.scan_aob()
 
     def get_version(self):
@@ -121,19 +131,19 @@ class DSProcess:
             version = self.pointers[Index.CHECK_VERSION].ReadUInt32(0)
             self.set_version(DSProcess.GAME_VERSIONS[version] if version is not None else None)
         except KeyError:
-            if self.debug:
+            if self._debug:
                 print(Fore.RED + format_exc() + Fore.RESET)
             self.set_version("Unknown")
         finally:
             try:
                 getattr(self, "update_version")()
             except AttributeError:
-                if self.debug:
+                if self._debug:
                     print(Fore.RED + format_exc() + Fore.RESET)
 
     def scan_aob(self):
 
-        p, h, i, o = self.pointers, self.hook, Index, DSOffsets
+        p, h, i, o = self.pointers, self._hook, Index, DSOffsets
 
         p[i.CHECK_VERSION] = h.CreateBasePointer(ptr(o.CHECK_VERSION))
 
@@ -157,7 +167,7 @@ class DSProcess:
                                                  o.CHAR_DATA_OFFSET_A1, o.CHAR_DATA_OFFSET_A2,
                                                  o.CHAR_DATA_OFFSET_A3)
         p[i.CHAR_MAP_DATA] = h.CreateChildPointer(p[i.CHAR_DATA_A], o.CharDataA.CHAR_MAP_DATA_POINTER)
-        p[i.ANIM_DATA] = h.CreateChildPointer(p[i.CHAR_MAP_DATA], o.CharMapData.ANIM_DATA_POINTER)
+        p[i.ANIM_DATA_A] = h.CreateChildPointer(p[i.CHAR_MAP_DATA], o.CharMapData.ANIM_DATA_POINTER_A)
         p[i.CHAR_POS_DATA] = h.CreateChildPointer(p[i.CHAR_MAP_DATA], o.CharMapData.CHAR_POS_DATA_POINTER)
         p[i.CHAR_DATA_B] = h.RegisterAbsoluteAOB(o.CHAR_DATA_B_AOB, o.CHAR_DATA_AOB_OFFSET_B,
                                                  o.CHAR_DATA_OFFSET_B1, o.CHAR_DATA_OFFSET_B2)
@@ -176,6 +186,9 @@ class DSProcess:
         p[i.UNKNOWN_C] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_C, o.UNKNOWN_AOB_OFFSET_C, o.UNKNOWN_OFFSET_C)
         p[i.UNKNOWN_D] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_D, o.UNKNOWN_AOB_OFFSET_D, o.UNKNOWN_OFFSET_D1,
                                                o.UNKNOWN_OFFSET_D2)
+
+        p[i.ANIM_DATA_B] = h.RegisterAbsoluteAOB(o.UNKNOWN_AOB_E, o.UNKNOWN_AOB_OFFSET_E1, o.UNKNOWN_AOB_OFFSET_E2,
+                                                 o.UNKNOWN_OFFSET_E1, o.UNKNOWN_OFFSET_E2, o.UNKNOWN_OFFSET_E3)
 
         p[i.FUNC_ITEM_GET] = h.RegisterAbsoluteAOB(o.FUNC_ITEM_GET_AOB)
         p[i.FUNC_LEVEL_UP] = h.RegisterAbsoluteAOB(o.FUNC_LEVEL_UP_AOB)
@@ -197,11 +210,11 @@ class DSProcess:
 
     def execute_asm(self, asm: str):
         byte_array = FasmNet.Assemble("use32\norg 0x0\n" + asm)
-        insert_ptr = self.hook.Allocate(len(byte_array))
+        insert_ptr = self._hook.Allocate(len(byte_array))
         byte_array = FasmNet.Assemble("use32\norg " + hex(insert_ptr.ToInt32()) + "\n" + asm)
-        Kernel32.WriteBytes(self.hook.Handle, insert_ptr, byte_array)
-        result = self.hook.Execute(insert_ptr)
-        self.hook.Free(insert_ptr)
+        Kernel32.WriteBytes(self._hook.Handle, insert_ptr, byte_array)
+        result = self._hook.Execute(insert_ptr)
+        self._hook.Free(insert_ptr)
         if result != 0:
             raise AsmExecuteError(result)
 
@@ -224,8 +237,8 @@ class DSProcess:
                 return offset, mask
 
     def read_event_flag(self, flag_id):
-        if not self.is_hooked():
-            raise ReadMemoryError()
+        if not self.is_loaded() or not self.is_hooked():
+            return None
         address, mask = self.get_event_flag_offset(flag_id)
         return self.pointers[Index.EVENT_FLAGS].ReadFlag32(address, mask)
 
@@ -234,9 +247,19 @@ class DSProcess:
         if not self.pointers[Index.EVENT_FLAGS].WriteFlag32(address, mask, value):
             raise WriteMemoryError()
 
-    def set_game_speed(self, speed: float):
-        if not self.pointers[Index.ANIM_DATA].WriteSingle(DSOffsets.AnimData.PLAY_SPEED, speed):
+    def listen_for_flag(self, flag_id, flag_state):
+        return wait_for(lambda: self.read_event_flag(flag_id), desired_state=flag_state)
+
+    def set_animation_speed(self, speed: float):
+        if not self.pointers[Index.ANIM_DATA_A].WriteSingle(DSOffsets.AnimData.PLAY_SPEED, speed):
             raise WriteMemoryError()
+
+    def get_last_animation(self):
+        if not self.is_hooked():
+            raise ReadMemoryError()
+        if not self.is_loaded():
+            return -1
+        return self.pointers[Index.ANIM_DATA_B].ReadInt32(DSOffsets.UnknownE.LAST_ANIMATION)
 
     def death_cam(self, enable: bool):
         if not self.pointers[Index.UNKNOWN_B].WriteBoolean(DSOffsets.UnknownB.DEATH_CAM, enable):
@@ -273,7 +296,7 @@ class DSProcess:
     def get_phantom_type(self):
         if not self.is_hooked():
             raise ReadMemoryError()
-        return self.pointers[Index.CHAR_DATA_A].ReaadInt32(DSOffsets.CharDataA.PHANTOM_TYPE)
+        return self.pointers[Index.CHAR_DATA_A].ReadInt32(DSOffsets.CharDataA.PHANTOM_TYPE)
 
     def set_team_type(self, value: int):
         if not self.pointers[Index.CHAR_DATA_A].WriteInt32(DSOffsets.CharDataA.TEAM_TYPE, value):
@@ -655,7 +678,7 @@ class DSProcess:
             return self.get_intelligence()
         elif stat == Stats.FTH:
             return self.get_faith()
-        elif stat == Stats.SLV:
+        elif stat == Stats.LVL:
             return self.get_soul_level()
         elif stat == Stats.SLS:
             return self.get_souls()
@@ -664,11 +687,11 @@ class DSProcess:
 
     def level_up(self, new_stats: dict):
 
-        stats = self.hook.Allocate(2048).ToInt32()
+        stats = self._hook.Allocate(2048).ToInt32()
         humanity = self.get_humanity()
         level = DSOffsets.FuncLevelUp
 
-        def write(offs, stat): Kernel32.WriteInt32(self.hook.Handle, ptr(stats + offs), stat)
+        def write(offs, stat): Kernel32.WriteInt32(self._hook.Handle, ptr(stats + offs), stat)
 
         write(level.VIT, new_stats[Stats.VIT])
         write(level.ATN, new_stats[Stats.ATN])
@@ -678,21 +701,18 @@ class DSProcess:
         write(level.RES, new_stats[Stats.RES])
         write(level.INT, new_stats[Stats.INT])
         write(level.FTH, new_stats[Stats.FTH])
-        write(level.SLV, new_stats[Stats.SLV])
+        write(level.SLV, new_stats[Stats.LVL])
         write(level.SLS, new_stats[Stats.SLS])
 
         self.set_no_dead(True)
-        result = \
-            self.execute_asm(
+        self.execute_asm(
                 Scripts.LEVEL_UP % (stats, stats, self.pointers[Index.FUNC_LEVEL_UP].Resolve().ToInt32())
-            )
+        )
         self.set_no_dead(False)
 
-        self.hook.Free(ptr(stats))
+        self._hook.Free(ptr(stats))
 
         self.set_humanity(humanity)
-
-        return result
 
     def get_pos(self):
         return (

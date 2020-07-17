@@ -1,5 +1,5 @@
-from dslib.ds_process import DSProcess
-from dsres.ds_resources import SAVE_DIR
+from dslib.process import DSProcess
+from dsres.resources import SAVE_DIR
 from tkinter import Tk, Label, StringVar, BooleanVar, Spinbox, Button, Entry, Checkbutton, LabelFrame
 from threading import Thread
 from time import sleep
