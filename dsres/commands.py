@@ -995,7 +995,6 @@ DS_NEST = {
             "gwyndolin-bonfire": None,
             "gwynevere-bonfire": None,
             "interior-bonfire": None,
-            "lady-of-the-darkling-bonfire": None
         },
         "ash-lake": {
             "bonfire-1": None,

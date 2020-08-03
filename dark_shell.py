@@ -7,6 +7,7 @@ from dslib.manager import DarkSouls
 from dsobj.item import DSItem
 from prompt_toolkit.shortcuts import set_title
 from threading import Thread, Event
+# noinspection PyUnresolvedReferences
 from os import system, _exit
 from _version import __version__, check_for_updates, MetaError
 from sys import argv, _getframe
@@ -25,12 +26,12 @@ class DarkShell(DSCmd):
     def __init__(self):
         super(DarkShell, self).__init__(_DEBUG)
         sync_evt = Event()
-        nest_add([DSItem(item.strip(), -1).get_name() for item in read_mod_items()])
+        nest_add([DSItem(item.strip()).get_name() for item in read_mod_items()])
         self.set_nested_completer(DS_NEST)
         self.game_man = DarkSouls(_DEBUG)
         Thread(target=self._execute_static_commands, args=(sync_evt,)).start()
         Thread(target=self._execute_waiting_commands, args=(sync_evt,)).start()
-        Thread(target=self.game_man.load_saved_func, args=(sync_evt,)).start()
+        Thread(target=self.game_man.load_all_func, args=(sync_evt,)).start()
 
     def _execute_static_commands(self, sync_execute: Event):
         sync_execute.wait()
@@ -113,8 +114,7 @@ class DarkShell(DSCmd):
             wait_evt = Event()
             self.game_man.switch(command="on-flag", arguments=["notify", wait_evt])
             Thread(target=self._delay_command, args=(args[0], args[1:], wait_evt)).start()
-            DarkSouls.WAITING_FUNC[hash(wait_evt)].update({"arg": args})
-            self.game_man.save_func()
+            DarkSouls.update_waiting_func(key=hash(wait_evt), val={"arg": args})
         except Exception as e:
             print(Fore.RED + (format_exc() if _DEBUG else "%s: %s" % (type(e).__name__, e)) + Fore.RESET)
 

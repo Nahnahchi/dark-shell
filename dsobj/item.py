@@ -15,7 +15,7 @@ class Upgrade(Enum):
 
 class DSItem:
 
-    def __init__(self, source: str, category: int):
+    def __init__(self, source: str, category: int = -1):
         source = source.split()
         self.category = category
         self.item_id = int(source[0]) if len(source) > 0 and source[0].isnumeric() else -1

@@ -129,7 +129,7 @@ class DSProcess:
     def check_version(self):
         try:
             version = self.pointers[Index.CHECK_VERSION].ReadUInt32(0)
-            self.set_version(DSProcess.GAME_VERSIONS[version] if version is not None else None)
+            self.set_version(DSProcess.GAME_VERSIONS[version])
         except KeyError:
             if self._debug:
                 print(Fore.RED + format_exc() + Fore.RESET)
@@ -221,9 +221,7 @@ class DSProcess:
     @staticmethod
     def get_event_flag_offset(flag_id):
         id_str = str(flag_id).zfill(8)
-        if len(id_str) != 8:
-            raise ArgumentError("Unknown event flag ID: %d" % flag_id)
-        else:
+        if len(id_str) == 8:
             group = id_str[0:1]
             area = id_str[1:4]
             section = int(id_str[4:5])
@@ -235,6 +233,7 @@ class DSProcess:
                 offset += int((number - (number % 32)) / 8)
                 mask = 0x80000000 >> (number % 32)
                 return offset, mask
+        raise ArgumentError("Unknown event flag ID: %d" % flag_id)
 
     def read_event_flag(self, flag_id):
         if not self.is_loaded() or not self.is_hooked():
