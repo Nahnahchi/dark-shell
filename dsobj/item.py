@@ -2,25 +2,24 @@ from enum import Enum
 from colorama import Fore
 
 
-class Upgrade(Enum):
-
-    NONE = 0
-    UNIQUE = 1
-    ARMOR = 2
-    INFUSABLE = 3
-    INFUSABLE_RESTRICTED = 4
-    PYRO_FLAME = 5
-    PYRO_FLAME_ASCENDED = 6
-
-
 class DSItem:
+
+    class Upgrade(Enum):
+        NONE = 0
+        UNIQUE = 1
+        ARMOR = 2
+        INFUSABLE = 3
+        INFUSABLE_RESTRICTED = 4
+        PYRO_FLAME = 5
+        PYRO_FLAME_ASCENDED = 6
 
     def __init__(self, source: str, category: int = -1):
         source = source.split()
         self.category = category
         self.item_id = int(source[0]) if len(source) > 0 and source[0].isnumeric() else -1
         self.stack_limit = int(source[1]) if len(source) > 1 and source[1].isnumeric() else -1
-        self.upgrade_type = Upgrade(int(source[2])) if len(source) > 2 and source[2].isnumeric() else Upgrade.NONE
+        self.upgrade_type = DSItem.Upgrade(int(source[2])) \
+            if len(source) > 2 and source[2].isnumeric() else DSItem.Upgrade.NONE
         self.item_name = source[3] if len(source) > 3 else ""
 
     def get_id(self):

@@ -1,5 +1,5 @@
 from dsobj.bonfire import DSBonfire
-from dsobj.item import DSItem, DSInfusion, Upgrade
+from dsobj.item import DSItem, DSInfusion
 from dslib.process import DSProcess, Stats
 from dslib.cmd import DSCmd
 from dsres.resources import SAVE_DIR, play_random_sound
@@ -147,7 +147,7 @@ class DarkSouls(DSProcess):
 
     @staticmethod
     def get_upgrade_value_pyro_flame(item: DSItem):
-        is_pyro_asc = item.get_upgrade_type() == Upgrade.PYRO_FLAME_ASCENDED
+        is_pyro_asc = item.get_upgrade_type() == DSItem.Upgrade.PYRO_FLAME_ASCENDED
         max_upgrade = 5 if is_pyro_asc else 15
         upgrade = input_dialog(
             title="Enter upgrade value for %s" % DarkSouls.get_name_from_arg(item.get_name()),
@@ -164,7 +164,7 @@ class DarkSouls(DSProcess):
 
     @staticmethod
     def get_upgrade_value_armor_or_unique(item: DSItem):
-        is_unique = item.get_upgrade_type() == Upgrade.UNIQUE
+        is_unique = item.get_upgrade_type() == DSItem.Upgrade.UNIQUE
         max_upgrade = 5 if is_unique else 10
         upgrade = input_dialog(
             title="Enter upgrade value for %s" % DarkSouls.get_name_from_arg(item.get_name()),
@@ -265,20 +265,20 @@ class DarkSouls(DSProcess):
             item = self.items[i_name]
             i_id = item.get_id()
             i_category = item.get_category()
-            if item.get_upgrade_type() == Upgrade.NONE:
+            if item.get_upgrade_type() == DSItem.Upgrade.NONE:
                 print(Fore.RED + "Can't upgrade this item!" + Fore.RESET)
                 return
-            elif item.get_upgrade_type() in (Upgrade.ARMOR, Upgrade.UNIQUE):
+            elif item.get_upgrade_type() in (DSItem.Upgrade.ARMOR, DSItem.Upgrade.UNIQUE):
                 upgrade = DarkSouls.get_upgrade_value_armor_or_unique(item)
                 if upgrade is None:
                     return
                 i_id += int(upgrade)
-            elif item.get_upgrade_type() in (Upgrade.PYRO_FLAME, Upgrade.PYRO_FLAME_ASCENDED):
+            elif item.get_upgrade_type() in (DSItem.Upgrade.PYRO_FLAME, DSItem.Upgrade.PYRO_FLAME_ASCENDED):
                 upgrade = DarkSouls.get_upgrade_value_pyro_flame(item)
                 if upgrade is None:
                     return
                 i_id += int(upgrade) * 100
-            elif item.get_upgrade_type() in (Upgrade.INFUSABLE, Upgrade.INFUSABLE_RESTRICTED):
+            elif item.get_upgrade_type() in (DSItem.Upgrade.INFUSABLE, DSItem.Upgrade.INFUSABLE_RESTRICTED):
                 values = [
                     (self.infusions[key].get_name(), self.infusions[key].get_name().upper())
                     for key in self.infusions.keys()
