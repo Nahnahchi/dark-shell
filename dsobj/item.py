@@ -61,7 +61,7 @@ class DSInfusion:
 
     def infuse(self, item: DSItem, upgrade: int):
         item_id = item.get_id()
-        if item.get_upgrade_type() not in (Upgrade.INFUSABLE, Upgrade.INFUSABLE_RESTRICTED):
+        if item.get_upgrade_type() not in (DSItem.Upgrade.INFUSABLE, DSItem.Upgrade.INFUSABLE_RESTRICTED):
             print(Fore.RED + ("Item '%s' is not infusable!" % self.get_name().replace("-", " ").title()) + Fore.RESET)
         elif upgrade > self.get_max_upgrade() or upgrade < 0:
             print(Fore.RED + ("Can't upgrade %s weapons to +%d!" % (self.get_name(), upgrade)) + Fore.RESET)
